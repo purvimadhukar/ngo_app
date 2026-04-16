@@ -40,21 +40,40 @@ class _NgoDashboardState extends State<NgoDashboard>
   Future<void> _loadProfile() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    final data = doc.data() ?? {};
-    final vSnap = await FirebaseFirestore.instance
-        .collection('verifications')
-        .where('ngoId', isEqualTo: uid)
-        .limit(1)
-        .get();
-    if (mounted) {
-      setState(() {
-        _ngoName = data['name'] ?? data['email'] ?? 'Your NGO';
-        _ngoVerified = data['ngoVerified'] ?? false;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get()
+          .timeout(const Duration(seconds: 8));
+      final data = doc.data() ?? {};
+
+      // Try verifications — may not exist yet, so catch any error
+      String vStatus = 'none';
+      try {
+        final vSnap = await FirebaseFirestore.instance
+            .collection('verifications')
+            .where('ngoId', isEqualTo: uid)
+            .limit(1)
+            .get()
+            .timeout(const Duration(seconds: 5));
         if (vSnap.docs.isNotEmpty) {
-          _verificationStatus = vSnap.docs.first.data()['status'] ?? 'pending';
+          vStatus = vSnap.docs.first.data()['status'] ?? 'pending';
         }
-      });
+      } catch (_) {
+        // verifications collection not set up yet — ignore
+      }
+
+      if (mounted) {
+        setState(() {
+          _ngoName = data['orgName'] ?? data['name'] ?? data['email'] ?? 'Your NGO';
+          _ngoVerified = data['ngoVerified'] ?? false;
+          _verificationStatus = vStatus;
+        });
+      }
+    } catch (e) {
+      // Silently handle timeout / permission error — dashboard still loads
+      if (mounted) setState(() {});
     }
   }
 
