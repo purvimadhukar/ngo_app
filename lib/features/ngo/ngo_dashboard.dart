@@ -1,0 +1,785 @@
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gap/gap.dart';
+
+import '../../core/app_theme.dart';
+import '../../models/ngo_post.dart';
+import '../../services/auth_service.dart';
+import 'create_post_screen.dart';
+import 'add_proof_screen.dart';
+import 'ngo_verification_screen.dart';
+
+class NgoDashboard extends StatefulWidget {
+  const NgoDashboard({super.key});
+
+  @override
+  State<NgoDashboard> createState() => _NgoDashboardState();
+}
+
+class _NgoDashboardState extends State<NgoDashboard>
+    with SingleTickerProviderStateMixin {
+  late TabController _tab;
+  String _ngoName = 'Your NGO';
+  bool _ngoVerified = false;
+  String _verificationStatus = 'none'; // none | pending | rejected | approved
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 2, vsync: this);
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = doc.data() ?? {};
+    final vSnap = await FirebaseFirestore.instance
+        .collection('verifications')
+        .where('ngoId', isEqualTo: uid)
+        .limit(1)
+        .get();
+    if (mounted) {
+      setState(() {
+        _ngoName = data['name'] ?? data['email'] ?? 'Your NGO';
+        _ngoVerified = data['ngoVerified'] ?? false;
+        if (vSnap.docs.isNotEmpty) {
+          _verificationStatus = vSnap.docs.first.data()['status'] ?? 'pending';
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    return Scaffold(
+      backgroundColor: AidColors.background,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+        ),
+        backgroundColor: AidColors.ngoAccent,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New Post', style: TextStyle(fontWeight: FontWeight.w600)),
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            if (!_ngoVerified) _buildVerificationBanner(context),
+            _buildStats(uid),
+            _buildTabBar(),
+            Expanded(
+              child: TabBarView(
+                controller: _tab,
+                children: [
+                  _MyPostsTab(uid: uid),
+                  _ImpactTab(uid: uid),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'AidBridge NGO',
+                      style: AidTextStyles.caption.copyWith(
+                        color: AidColors.ngoAccent,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                    if (_ngoVerified) ...[
+                      const Gap(6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AidColors.ngoAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.verified_rounded, size: 10, color: AidColors.ngoAccent),
+                            const Gap(3),
+                            Text(
+                              'VERIFIED',
+                              style: AidTextStyles.labelSm.copyWith(
+                                color: AidColors.ngoAccent,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                Text(_ngoName, style: AidTextStyles.heading.copyWith(fontSize: 22)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout_rounded, color: AidColors.textMuted, size: 22),
+            onPressed: () => AuthService.instance.signOut(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationBanner(BuildContext context) {
+    final isPending = _verificationStatus == 'pending';
+    final isRejected = _verificationStatus == 'rejected';
+    final color = isPending ? AidColors.warning : isRejected ? AidColors.error : AidColors.info;
+    final icon = isPending ? Icons.hourglass_top_rounded : isRejected ? Icons.cancel_rounded : Icons.verified_user_outlined;
+    final msg = isPending
+        ? 'Verification under review — we\'ll notify you when approved'
+        : isRejected
+            ? 'Verification rejected. Tap to re-submit with correct documents'
+            : 'Verify your NGO to build donor trust and unlock more visibility';
+
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const NgoVerificationScreen()),
+      ).then((_) => _loadProfile()),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 18),
+            const Gap(10),
+            Expanded(child: Text(msg, style: AidTextStyles.caption.copyWith(color: color))),
+            if (!isPending) ...[
+              const Gap(8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(99)),
+                child: Text(
+                  isRejected ? 'Re-apply' : 'Apply',
+                  style: AidTextStyles.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStats(String uid) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('posts').where('ngoId', isEqualTo: uid).snapshots(),
+      builder: (context, snap) {
+        final docs = snap.data?.docs ?? [];
+        final total = docs.length;
+        final active = docs.where((d) => (d.data() as Map)['status'] == 'active').length;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+          child: Row(
+            children: [
+              _StatChip(label: 'Posts', value: '$total', icon: Icons.article_outlined, color: AidColors.ngoAccent),
+              const Gap(8),
+              _StatChip(label: 'Active', value: '$active', icon: Icons.radio_button_checked, color: AidColors.success),
+              const Gap(8),
+              _StatChip(
+                label: 'Status',
+                value: _ngoVerified ? 'Verified' : 'Unverified',
+                icon: Icons.verified_outlined,
+                color: _ngoVerified ? AidColors.ngoAccent : AidColors.textMuted,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(color: AidColors.surface, borderRadius: BorderRadius.circular(12)),
+        child: TabBar(
+          controller: _tab,
+          indicator: BoxDecoration(color: AidColors.ngoAccent, borderRadius: BorderRadius.circular(10)),
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: Colors.transparent,
+          labelColor: Colors.white,
+          unselectedLabelColor: AidColors.textMuted,
+          labelStyle: AidTextStyles.caption.copyWith(fontWeight: FontWeight.w700),
+          unselectedLabelStyle: AidTextStyles.caption,
+          tabs: const [Tab(text: 'My Posts'), Tab(text: 'Impact')],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── My Posts Tab ─────────────────────────────────────────────────────────────
+
+class _MyPostsTab extends StatelessWidget {
+  final String uid;
+  const _MyPostsTab({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('posts')
+          .where('ngoId', isEqualTo: uid)
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent));
+        }
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) return _EmptyPosts();
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          itemCount: docs.length,
+          separatorBuilder: (_, __) => const Gap(12),
+          itemBuilder: (_, i) => _NgoPostCard(post: NgoPost.fromFirestore(docs[i])),
+        );
+      },
+    );
+  }
+}
+
+class _EmptyPosts extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80, height: 80,
+              decoration: BoxDecoration(
+                color: AidColors.ngoAccent.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.post_add_rounded, size: 40, color: AidColors.ngoAccent),
+            ),
+            const Gap(20),
+            Text('No posts yet', style: AidTextStyles.headingMd),
+            const Gap(8),
+            Text(
+              'Tap + New Post to create your first donation drive or volunteer event.',
+              style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── NGO Post Card ────────────────────────────────────────────────────────────
+
+class _NgoPostCard extends StatelessWidget {
+  final NgoPost post;
+  const _NgoPostCard({required this.post});
+
+  Color get _typeColor => post.type == PostType.donation
+      ? AidColors.donorAccent
+      : post.type == PostType.activity
+          ? AidColors.volunteerAccent
+          : AidColors.error;
+
+  String get _typeLabel => post.type == PostType.donation
+      ? 'Donation Drive'
+      : post.type == PostType.activity
+          ? 'Volunteer Event'
+          : 'Emergency';
+
+  Color get _statusColor => post.status == PostStatus.active
+      ? AidColors.success
+      : post.status == PostStatus.fulfilled
+          ? AidColors.ngoAccent
+          : AidColors.textMuted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AidColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AidColors.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Media / placeholder
+          if (post.mediaUrls.isNotEmpty)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.network(
+                post.mediaUrls.first,
+                height: 150, width: double.infinity, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _placeholderBanner(),
+              ),
+            )
+          else
+            _placeholderBanner(),
+
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _Badge(label: _typeLabel, color: _typeColor),
+                    const Gap(8),
+                    _Badge(label: post.status.name.toUpperCase(), color: _statusColor),
+                    const Spacer(),
+                    Text(post.category, style: AidTextStyles.labelSm.copyWith(color: AidColors.textMuted)),
+                  ],
+                ),
+                const Gap(8),
+                Text(post.title, style: AidTextStyles.headingMd),
+                const Gap(4),
+                Text(
+                  post.description,
+                  style: AidTextStyles.bodyMd.copyWith(color: AidColors.textSecondary),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+
+                // Item progress
+                if (post.requiredItems.isNotEmpty) ...[
+                  const Gap(12),
+                  ...post.requiredItems.take(2).map((item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 7),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('${item.name} (${item.unit})', style: AidTextStyles.labelMd),
+                                Text(
+                                  '${item.fulfilledQty.toInt()} / ${item.targetQty.toInt()}',
+                                  style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
+                                ),
+                              ],
+                            ),
+                            const Gap(4),
+                            LinearProgressIndicator(
+                              value: item.progressPercent,
+                              minHeight: 5,
+                              borderRadius: BorderRadius.circular(3),
+                              color: AidColors.ngoAccent,
+                              backgroundColor: AidColors.elevated,
+                            ),
+                          ],
+                        ),
+                      )),
+                ],
+
+                // Event details
+                if (post.eventDetails != null) ...[
+                  const Gap(10),
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today_outlined, size: 13, color: AidColors.textMuted),
+                      const Gap(4),
+                      Text(
+                        '${post.eventDetails!.eventDate.day}/${post.eventDetails!.eventDate.month}/${post.eventDetails!.eventDate.year}',
+                        style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
+                      ),
+                      const Gap(12),
+                      const Icon(Icons.location_on_outlined, size: 13, color: AidColors.textMuted),
+                      const Gap(4),
+                      Expanded(
+                        child: Text(
+                          post.eventDetails!.location,
+                          style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
+                const Gap(14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => AddProofScreen(post: post)),
+                        ),
+                        icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
+                        label: const Text('Add Proof'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AidColors.ngoAccent,
+                          side: BorderSide(color: AidColors.ngoAccent.withValues(alpha: 0.4)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          textStyle: AidTextStyles.labelMd,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const Gap(8),
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: () => _showActivity(context),
+                        icon: const Icon(Icons.bar_chart_rounded, size: 16),
+                        label: const Text('Activity'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AidColors.ngoAccent.withValues(alpha: 0.15),
+                          foregroundColor: AidColors.ngoAccent,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          textStyle: AidTextStyles.labelMd,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _placeholderBanner() {
+    return Container(
+      height: 70,
+      decoration: BoxDecoration(
+        color: _typeColor.withValues(alpha: 0.07),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Center(
+        child: Icon(
+          post.type == PostType.activity ? Icons.event_rounded : Icons.volunteer_activism_rounded,
+          color: _typeColor.withValues(alpha: 0.4),
+          size: 30,
+        ),
+      ),
+    );
+  }
+
+  void _showActivity(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AidColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _PostActivitySheet(postId: post.id, postTitle: post.title),
+    );
+  }
+}
+
+// ─── Post Activity Sheet ──────────────────────────────────────────────────────
+
+class _PostActivitySheet extends StatelessWidget {
+  final String postId;
+  final String postTitle;
+  const _PostActivitySheet({required this.postId, required this.postTitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, controller) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(width: 36, height: 4,
+                    decoration: BoxDecoration(color: AidColors.borderStrong, borderRadius: BorderRadius.circular(2))),
+                ),
+                const Gap(14),
+                Text('Activity', style: AidTextStyles.headingMd),
+                Text(postTitle, style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted), overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('posts')
+                  .doc(postId)
+                  .collection('donations')
+                  .orderBy('donatedAt', descending: true)
+                  .snapshots(),
+              builder: (context, snap) {
+                final docs = snap.data?.docs ?? [];
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent));
+                }
+                if (docs.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.inbox_rounded, size: 48, color: AidColors.textMuted),
+                          const Gap(12),
+                          Text('No donations yet', style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted)),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return ListView.separated(
+                  controller: controller,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: docs.length,
+                  separatorBuilder: (_, __) => const Divider(color: AidColors.borderSubtle, height: 1),
+                  itemBuilder: (_, i) {
+                    final d = docs[i].data() as Map<String, dynamic>;
+                    final hasItem = (d['item'] as String?)?.isNotEmpty == true;
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      leading: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: AidColors.donorAccent.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.favorite_rounded, color: AidColors.donorAccent, size: 18),
+                      ),
+                      title: Text(d['donorEmail'] ?? 'Anonymous', style: AidTextStyles.bodyMd),
+                      subtitle: Text(
+                        hasItem ? d['item'] : '₹${(d['amount'] ?? 0).toStringAsFixed(0)}',
+                        style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
+                      ),
+                      trailing: _StatusChip(status: d['status'] ?? 'pending'),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Impact Tab ───────────────────────────────────────────────────────────────
+
+class _ImpactTab extends StatelessWidget {
+  final String uid;
+  const _ImpactTab({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('posts').where('ngoId', isEqualTo: uid).snapshots(),
+      builder: (context, snap) {
+        final docs = snap.data?.docs ?? [];
+        final total = docs.length;
+        final active = docs.where((d) => (d.data() as Map)['status'] == 'active').length;
+        final events = docs.where((d) => (d.data() as Map)['type'] == 'activity').length;
+        final items = docs.fold<int>(0, (s, d) =>
+            s + (((d.data() as Map)['requiredItems'] as List? ?? []).length));
+        final proofUrls = docs
+            .expand((d) => ((d.data() as Map)['proofUrls'] as List? ?? []).cast<String>())
+            .toList();
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+          children: [
+            Text('Your Impact', style: AidTextStyles.headingLg),
+            const Gap(4),
+            Text('How AidBridge amplifies your work', style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted)),
+            const Gap(20),
+            Row(children: [
+              Expanded(child: _ImpactCard(value: '$total', label: 'Total Posts', icon: Icons.article_rounded, color: AidColors.ngoAccent)),
+              const Gap(12),
+              Expanded(child: _ImpactCard(value: '$active', label: 'Active', icon: Icons.radio_button_checked, color: AidColors.success)),
+            ]),
+            const Gap(12),
+            Row(children: [
+              Expanded(child: _ImpactCard(value: '$items', label: 'Items Listed', icon: Icons.inventory_2_outlined, color: AidColors.donorAccent)),
+              const Gap(12),
+              Expanded(child: _ImpactCard(value: '$events', label: 'Events', icon: Icons.event_rounded, color: AidColors.volunteerAccent)),
+            ]),
+            const Gap(24),
+            Text('Proof of Impact', style: AidTextStyles.headingMd),
+            const Gap(4),
+            Text('Photos uploaded after events as proof', style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted)),
+            const Gap(12),
+            if (proofUrls.isEmpty)
+              Container(
+                height: 110,
+                decoration: BoxDecoration(
+                  color: AidColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AidColors.borderSubtle),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.photo_library_outlined, color: AidColors.textMuted, size: 30),
+                      const Gap(8),
+                      Text('No proof photos yet', style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted)),
+                    ],
+                  ),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, crossAxisSpacing: 6, mainAxisSpacing: 6,
+                ),
+                itemCount: proofUrls.length,
+                itemBuilder: (_, i) => ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(proofUrls[i], fit: BoxFit.cover),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Shared widgets ───────────────────────────────────────────────────────────
+
+class _StatChip extends StatelessWidget {
+  final String label, value;
+  final IconData icon;
+  final Color color;
+  const _StatChip({required this.label, required this.value, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 11),
+          decoration: BoxDecoration(
+            color: AidColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 15, color: color),
+              const Gap(5),
+              Text(value, style: AidTextStyles.headingSm.copyWith(color: color)),
+              Text(label, style: AidTextStyles.labelSm),
+            ],
+          ),
+        ),
+      );
+}
+
+class _ImpactCard extends StatelessWidget {
+  final String value, label;
+  final IconData icon;
+  final Color color;
+  const _ImpactCard({required this.value, required this.label, required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const Gap(10),
+            Text(value, style: AidTextStyles.displaySm.copyWith(color: color)),
+            Text(label, style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted)),
+          ],
+        ),
+      );
+}
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _Badge({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+        child: Text(label, style: AidTextStyles.labelSm.copyWith(color: color, fontWeight: FontWeight.w700)),
+      );
+}
+
+class _StatusChip extends StatelessWidget {
+  final String status;
+  const _StatusChip({required this.status});
+
+  Color get _color => status == 'accepted'
+      ? AidColors.success
+      : status == 'rejected'
+          ? AidColors.error
+          : AidColors.warning;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: _color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+        child: Text(
+          status.toUpperCase(),
+          style: AidTextStyles.labelSm.copyWith(color: _color, fontWeight: FontWeight.w700, fontSize: 9),
+        ),
+      );
+}
