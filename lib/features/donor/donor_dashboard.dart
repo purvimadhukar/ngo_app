@@ -15,6 +15,7 @@ import '../common/settings_screen.dart';
 import 'donation_detail_screen.dart';
 import 'donation_history_screen.dart';
 import 'donor_groups_screen.dart';
+import 'featured_cause_screen.dart';
 
 class DonorDashboard extends StatefulWidget {
   const DonorDashboard({super.key});
@@ -95,7 +96,8 @@ class _FeedPageState extends State<_FeedPage>
   String _filterCategory = 'All';
 
   static const _categories = [
-    'All', 'food', 'clothes', 'medical', 'education', 'funds', 'other'
+    'All', 'food', 'medical', 'clothes', 'education', 'funds',
+    'old age home', 'disaster relief', 'environment', 'women', 'children', 'animals', 'shelter',
   ];
 
   @override
@@ -365,6 +367,10 @@ class _FeedTab extends StatelessWidget {
 
     return Column(
       children: [
+        // ── Featured Cause Banner (Manasa Medical Trust) ─────────────
+        _FeaturedCauseBanner(),
+        // ── Services Grid ─────────────────────────────────────────────
+        _ServicesGrid(onCategoryTap: onFilterChanged),
         // Category chips
         SizedBox(
           height: 52,
@@ -708,6 +714,239 @@ class _MyDonationsTab extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+// ─── Featured Cause Banner ────────────────────────────────────────────────────
+
+class _FeaturedCauseBanner extends StatelessWidget {
+  const _FeaturedCauseBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('campaigns')
+          .doc('manasa_medical_trust')
+          .snapshots(),
+      builder: (context, snap) {
+        final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+        final raised = (data['totalRaised'] ?? 0).toDouble();
+        final goal = (data['goal'] ?? 1000000).toDouble();
+        final progress = (raised / goal).clamp(0.0, 1.0);
+        final pct = (progress * 100).toInt();
+
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const FeaturedCauseScreen()),
+          ),
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2D1B69), Color(0xFF4F46E5)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        '⭐  FEATURED CAUSE',
+                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                      ),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 14),
+                  ],
+                ),
+                const Gap(10),
+                const Text(
+                  'Manasa Medical Trust',
+                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
+                ),
+                const Gap(2),
+                const Text(
+                  'Old Age Home • Medical Care • Since 2012',
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                const Gap(12),
+                // Fundraising progress
+                Row(
+                  children: [
+                    Text(
+                      '₹${_fmt(raised)} raised',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                    const Gap(6),
+                    Text(
+                      '· $pct% of goal',
+                      style: const TextStyle(color: Colors.white60, fontSize: 12),
+                    ),
+                  ],
+                ),
+                const Gap(6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                const Gap(12),
+                Row(
+                  children: [
+                    _pill('💊 Medicines'),
+                    const Gap(6),
+                    _pill('🍱 Meals'),
+                    const Gap(6),
+                    _pill('👩‍⚕️ Caregivers'),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Donate',
+                        style: TextStyle(
+                          color: Color(0xFF4F46E5),
+                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _pill(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+    );
+  }
+
+  String _fmt(double v) {
+    if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    return v.toInt().toString();
+  }
+}
+
+// ─── Services Grid ────────────────────────────────────────────────────────────
+
+class _ServicesGrid extends StatelessWidget {
+  final void Function(String) onCategoryTap;
+  const _ServicesGrid({required this.onCategoryTap});
+
+  static const _services = [
+    {'icon': '🍚', 'label': 'Food', 'cat': 'food', 'color': 0xFFFF9800},
+    {'icon': '💊', 'label': 'Medical', 'cat': 'medical', 'color': 0xFFE91E63},
+    {'icon': '👕', 'label': 'Clothes', 'cat': 'clothes', 'color': 0xFF2196F3},
+    {'icon': '📚', 'label': 'Education', 'cat': 'education', 'color': 0xFF9C27B0},
+    {'icon': '👴', 'label': 'Old Age', 'cat': 'old age home', 'color': 0xFF7C3AED},
+    {'icon': '🌊', 'label': 'Disaster', 'cat': 'disaster relief', 'color': 0xFF00BCD4},
+    {'icon': '👶', 'label': 'Children', 'cat': 'children', 'color': 0xFFFF5722},
+    {'icon': '🌱', 'label': 'Environment', 'cat': 'environment', 'color': 0xFF4CAF50},
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          child: Row(
+            children: [
+              Text('Causes', style: AidTextStyles.headingMd),
+              const Spacer(),
+              GestureDetector(
+                onTap: () => onCategoryTap('All'),
+                child: Text(
+                  'See all',
+                  style: AidTextStyles.labelMd.copyWith(color: AidColors.donorAccent),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 88,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _services.length,
+            separatorBuilder: (_, __) => const Gap(10),
+            itemBuilder: (_, i) {
+              final s = _services[i];
+              final color = Color(s['color'] as int);
+              return GestureDetector(
+                onTap: () => onCategoryTap(s['cat'] as String),
+                child: Container(
+                  width: 72,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: color.withValues(alpha: 0.2)),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(s['icon'] as String, style: const TextStyle(fontSize: 24)),
+                      const Gap(4),
+                      Text(
+                        s['label'] as String,
+                        style: AidTextStyles.labelSm.copyWith(
+                          color: color,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        const Gap(6),
+      ],
     );
   }
 }
