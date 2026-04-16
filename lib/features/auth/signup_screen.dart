@@ -195,23 +195,44 @@ class _SignupScreenState extends State<SignupScreen>
               ),
               const Gap(8),
               _RoleChip(
-                label: 'NGO',
+                label: 'Organisation',
                 icon: Icons.business_rounded,
                 color: AidColors.ngoAccent,
-                selected: _role == 'ngo',
+                selected: _role == 'ngo' || _role == 'careHome',
                 onTap: () => setState(() => _role = 'ngo'),
-              ),
-              const Gap(8),
-              _RoleChip(
-                label: 'Care Centre',
-                icon: Icons.home_work_rounded,
-                color: const Color(0xFF7C3AED),
-                selected: _role == 'careHome',
-                onTap: () => setState(() => _role = 'careHome'),
               ),
             ],
           ),
-          const Gap(28),
+
+          // Sub-type picker — shown only when Organisation is selected
+          if (_role == 'ngo' || _role == 'careHome') ...[
+            const Gap(14),
+            Text('Organisation type', style: AidTextStyles.labelMd.copyWith(color: AidColors.textSecondary)),
+            const Gap(8),
+            Row(
+              children: [
+                _SubTypeChip(
+                  emoji: '🏢',
+                  label: 'NGO / Trust',
+                  subtitle: 'Post drives & volunteer events',
+                  selected: _role == 'ngo',
+                  color: AidColors.ngoAccent,
+                  onTap: () => setState(() => _role = 'ngo'),
+                ),
+                const Gap(10),
+                _SubTypeChip(
+                  emoji: '🏠',
+                  label: 'Welfare Home',
+                  subtitle: 'Old age home, shelter, care centre',
+                  selected: _role == 'careHome',
+                  color: const Color(0xFF7C3AED),
+                  onTap: () => setState(() => _role = 'careHome'),
+                ),
+              ],
+            ),
+          ],
+
+          const Gap(24),
 
           _field(
             controller: _nameCtrl,
@@ -505,6 +526,74 @@ class _RoleChip extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SubTypeChip extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final String subtitle;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _SubTypeChip({
+    required this.emoji,
+    required this.label,
+    required this.subtitle,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: selected ? color.withValues(alpha: 0.1) : AidColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? color : AidColors.borderDefault,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const Gap(8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: AidTextStyles.headingSm.copyWith(
+                        color: selected ? color : AidColors.textPrimary,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: AidTextStyles.labelSm.copyWith(
+                        color: AidColors.textSecondary,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (selected)
+                Icon(Icons.check_circle_rounded, color: color, size: 16),
+            ],
+          ),
         ),
       ),
     );

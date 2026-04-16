@@ -131,9 +131,21 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
               const Gap(12),
               _roleOption('volunteer', '🧡', 'Volunteer', 'Join activities & earn rewards'),
               const Gap(12),
-              _roleOption('ngo', '💚', 'NGO', 'Post needs & manage drives'),
-              const Gap(12),
-              _roleOption('careHome', '🏠', 'Care Centre', 'Manage your care home & post needs'),
+              _roleOption('ngo', '💚', 'Organisation', 'NGO, care home, or welfare centre'),
+              // Sub-options when Organisation is selected
+              if (_role == 'ngo' || _role == 'careHome') ...[
+                const Gap(10),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Column(
+                    children: [
+                      _subOption('ngo', '🏢', 'NGO / Trust', 'Post drives & manage campaigns'),
+                      const Gap(8),
+                      _subOption('careHome', '🏠', 'Welfare Home', 'Old age home, shelter, care centre'),
+                    ],
+                  ),
+                ),
+              ],
               const Gap(32),
               SizedBox(
                 width: double.infinity,
@@ -161,8 +173,43 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
     );
   }
 
-  Widget _roleOption(String value, String emoji, String label, String subtitle) {
+  Widget _subOption(String value, String emoji, String label, String subtitle) {
     final selected = _role == value;
+    return GestureDetector(
+      onTap: () => setState(() => _role = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF7C3AED).withValues(alpha: 0.1) : const Color(0xFF1A1A1F),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? const Color(0xFF7C3AED) : const Color(0xFF2A2A30),
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 18)),
+            const Gap(10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
+              ),
+            ),
+            if (selected) const Icon(Icons.check_circle_rounded, color: Color(0xFF7C3AED), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _roleOption(String value, String emoji, String label, String subtitle) {
+    final selected = _role == value || (value == 'ngo' && (_role == 'ngo' || _role == 'careHome'));
     return GestureDetector(
       onTap: () => setState(() => _role = value),
       child: AnimatedContainer(
