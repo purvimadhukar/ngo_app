@@ -39,6 +39,7 @@ class _SignupScreenState extends State<SignupScreen>
     'donor': AidColors.donorAccent,
     'volunteer': AidColors.volunteerAccent,
     'ngo': AidColors.ngoAccent,
+    'careHome': Color(0xFF7C3AED),
   };
 
   Color get _accent => _roleColors[_role] ?? AidColors.ngoAccent;
@@ -83,7 +84,7 @@ class _SignupScreenState extends State<SignupScreen>
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      if (_role == 'ngo') {
+      if (_role == 'ngo' || _role == 'careHome') {
         userData['orgName'] = _orgNameCtrl.text.trim();
         userData['regNumber'] = _regNumberCtrl.text.trim();
         userData['bio'] = _orgBioCtrl.text.trim();
@@ -108,7 +109,7 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   void _nextStep() {
-    if (_role == 'ngo' && _currentStep == 0) {
+    if ((_role == 'ngo' || _role == 'careHome') && _currentStep == 0) {
       setState(() => _currentStep = 1);
       _pageController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -119,7 +120,7 @@ class _SignupScreenState extends State<SignupScreen>
     }
   }
 
-  bool get _isNgoStep2 => _role == 'ngo' && _currentStep == 1;
+  bool get _isNgoStep2 => (_role == 'ngo' || _role == 'careHome') && _currentStep == 1;
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +185,7 @@ class _SignupScreenState extends State<SignupScreen>
                 selected: _role == 'donor',
                 onTap: () => setState(() => _role = 'donor'),
               ),
-              const Gap(10),
+              const Gap(8),
               _RoleChip(
                 label: 'Volunteer',
                 icon: Icons.volunteer_activism_rounded,
@@ -192,7 +193,7 @@ class _SignupScreenState extends State<SignupScreen>
                 selected: _role == 'volunteer',
                 onTap: () => setState(() => _role = 'volunteer'),
               ),
-              const Gap(10),
+              const Gap(8),
               _RoleChip(
                 label: 'NGO',
                 icon: Icons.business_rounded,
@@ -200,13 +201,21 @@ class _SignupScreenState extends State<SignupScreen>
                 selected: _role == 'ngo',
                 onTap: () => setState(() => _role = 'ngo'),
               ),
+              const Gap(8),
+              _RoleChip(
+                label: 'Care Centre',
+                icon: Icons.home_work_rounded,
+                color: const Color(0xFF7C3AED),
+                selected: _role == 'careHome',
+                onTap: () => setState(() => _role = 'careHome'),
+              ),
             ],
           ),
           const Gap(28),
 
           _field(
             controller: _nameCtrl,
-            label: _role == 'ngo' ? 'Contact Person Name' : 'Full Name',
+            label: (_role == 'ngo' || _role == 'careHome') ? 'Contact Person Name' : 'Full Name',
             hint: 'Your name',
             icon: Icons.person_outline_rounded,
             validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
@@ -295,7 +304,11 @@ class _SignupScreenState extends State<SignupScreen>
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
-                      _role == 'ngo' ? 'Next: Organisation Details →' : 'Create Account',
+                      _role == 'ngo'
+                          ? 'Next: Organisation Details →'
+                          : _role == 'careHome'
+                              ? 'Next: Centre Details →'
+                              : 'Create Account',
                       style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                     ),
             ),

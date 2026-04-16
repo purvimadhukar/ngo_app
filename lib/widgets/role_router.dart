@@ -10,6 +10,7 @@ import '../features/donor/donor_dashboard.dart';
 import '../features/volunteer/volunteer_dashboard.dart';
 import '../features/admin/admin_dashboard.dart';
 import '../features/manager/manager_dashboard.dart';
+import '../features/care_home/care_home_dashboard.dart';
 
 /// Listens to Firebase auth state and routes to the correct dashboard
 /// based on the user's role: ngo | donor | volunteer | admin | manager
@@ -54,6 +55,8 @@ class RoleRouter extends StatelessWidget {
                 return const AdminDashboard();
               case 'manager':
                 return const ManagerDashboard();
+              case 'careHome':
+                return const CareHomeDashboard();
               case '__missing__':
                 return _RolePickerScaffold(uid: user.uid, user: user);
               default:
@@ -129,6 +132,8 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
               _roleOption('volunteer', '🧡', 'Volunteer', 'Join activities & earn rewards'),
               const Gap(12),
               _roleOption('ngo', '💚', 'NGO', 'Post needs & manage drives'),
+              const Gap(12),
+              _roleOption('careHome', '🏠', 'Care Centre', 'Manage your care home & post needs'),
               const Gap(32),
               SizedBox(
                 width: double.infinity,

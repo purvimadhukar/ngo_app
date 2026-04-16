@@ -367,8 +367,8 @@ class _FeedTab extends StatelessWidget {
 
     return Column(
       children: [
-        // ── Featured Cause Banner (Manasa Medical Trust) ─────────────
-        _FeaturedCauseBanner(),
+        // ── Platform Impact Stats ─────────────────────────────────────
+        const _ImpactStatsCard(),
         // ── Services Grid ─────────────────────────────────────────────
         _ServicesGrid(onCategoryTap: onFilterChanged),
         // Category chips
@@ -718,150 +718,143 @@ class _MyDonationsTab extends StatelessWidget {
   }
 }
 
-// ─── Featured Cause Banner ────────────────────────────────────────────────────
+// ─── Platform Impact Stats Card ───────────────────────────────────────────────
 
-class _FeaturedCauseBanner extends StatelessWidget {
-  const _FeaturedCauseBanner();
+class _ImpactStatsCard extends StatelessWidget {
+  const _ImpactStatsCard();
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot>(
+    return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
-          .collection('campaigns')
-          .doc('manasa_medical_trust')
+          .collection('posts')
+          .where('status', isEqualTo: 'active')
           .snapshots(),
-      builder: (context, snap) {
-        final data = snap.data?.data() as Map<String, dynamic>? ?? {};
-        final raised = (data['totalRaised'] ?? 0).toDouble();
-        final goal = (data['goal'] ?? 1000000).toDouble();
-        final progress = (raised / goal).clamp(0.0, 1.0);
-        final pct = (progress * 100).toInt();
+      builder: (context, postsSnap) {
+        final posts = postsSnap.data?.docs ?? [];
 
-        return GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const FeaturedCauseScreen()),
-          ),
-          child: Container(
-            margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF2D1B69), Color(0xFF4F46E5)],
+        // Aggregate totals across all active posts
+        double totalFulfilled = 0;
+        int activeCauses = posts.length;
+        int volunteerEvents = 0;
+
+        for (final doc in posts) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data['type'] == 'activity') volunteerEvents++;
+          final items = data['requiredItems'] as List<dynamic>? ?? [];
+          for (final item in items) {
+            final m = item as Map<String, dynamic>;
+            totalFulfilled += (m['fulfilledQty'] ?? 0).toDouble();
+          }
+        }
+
+        return FutureBuilder<AggregateQuerySnapshot>(
+          future: FirebaseFirestore.instance
+              .collectionGroup('donations')
+              .count()
+              .get(),
+          builder: (context, donSnap) {
+            final totalDonations = donSnap.data?.count ?? 0;
+
+            return Container(
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AidColors.donorAccent.withValues(alpha: 0.15),
+                    AidColors.ngoAccent.withValues(alpha: 0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AidColors.donorAccent.withValues(alpha: 0.2)),
               ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        '⭐  FEATURED CAUSE',
-                        style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.8),
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 14),
-                  ],
-                ),
-                const Gap(10),
-                const Text(
-                  'Manasa Medical Trust',
-                  style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-                ),
-                const Gap(2),
-                const Text(
-                  'Old Age Home • Medical Care • Since 2012',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const Gap(12),
-                // Fundraising progress
-                Row(
-                  children: [
-                    Text(
-                      '₹${_fmt(raised)} raised',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-                    ),
-                    const Gap(6),
-                    Text(
-                      '· $pct% of goal',
-                      style: const TextStyle(color: Colors.white60, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const Gap(6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 6,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
-                const Gap(12),
-                Row(
-                  children: [
-                    _pill('💊 Medicines'),
-                    const Gap(6),
-                    _pill('🍱 Meals'),
-                    const Gap(6),
-                    _pill('👩‍⚕️ Caregivers'),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Donate',
-                        style: TextStyle(
-                          color: Color(0xFF4F46E5),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: AidColors.donorAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '🌍  PLATFORM IMPACT',
+                          style: AidTextStyles.labelSm.copyWith(
+                            color: AidColors.donorAccent,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 9,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+                    ],
+                  ),
+                  const Gap(12),
+                  Text(
+                    'Together, we\'re making a difference',
+                    style: AidTextStyles.headingMd,
+                  ),
+                  const Gap(2),
+                  Text(
+                    'Live numbers across all causes on AidBridge',
+                    style: AidTextStyles.bodySm,
+                  ),
+                  const Gap(14),
+                  Row(
+                    children: [
+                      _stat('$activeCauses', 'Active\nCauses', AidColors.donorAccent),
+                      _divider(),
+                      _stat('$totalDonations', 'Donations\nMade', AidColors.ngoAccent),
+                      _divider(),
+                      _stat(_fmtQty(totalFulfilled), 'Items\nCollected', AidColors.volunteerAccent),
+                      _divider(),
+                      _stat('$volunteerEvents', 'Volunteer\nEvents', const Color(0xFF4F46E5)),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _pill(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
+  Widget _stat(String value, String label, Color color) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              height: 1,
+            ),
+          ),
+          const Gap(4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AidTextStyles.labelSm.copyWith(color: AidColors.textSecondary, height: 1.3),
+          ),
+        ],
       ),
-      child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
     );
   }
 
-  String _fmt(double v) {
-    if (v >= 100000) return '${(v / 100000).toStringAsFixed(1)}L';
+  Widget _divider() => Container(
+    width: 1, height: 36,
+    color: AidColors.borderDefault,
+    margin: const EdgeInsets.symmetric(horizontal: 4),
+  );
+
+  String _fmtQty(double v) {
     if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
     return v.toInt().toString();
   }
