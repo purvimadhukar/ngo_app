@@ -27,7 +27,7 @@ class _NgoDashboardState extends State<NgoDashboard>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tab = TabController(length: 3, vsync: this);
     _loadProfile();
   }
 
@@ -105,6 +105,7 @@ class _NgoDashboardState extends State<NgoDashboard>
                 controller: _tab,
                 children: [
                   _MyPostsTab(uid: uid),
+                  _ActivitiesTab(uid: uid),
                   _ImpactTab(uid: uid),
                 ],
               ),
@@ -263,7 +264,7 @@ class _NgoDashboardState extends State<NgoDashboard>
           unselectedLabelColor: AidColors.textMuted,
           labelStyle: AidTextStyles.caption.copyWith(fontWeight: FontWeight.w700),
           unselectedLabelStyle: AidTextStyles.caption,
-          tabs: const [Tab(text: 'My Posts'), Tab(text: 'Impact')],
+          tabs: const [Tab(text: 'My Posts'), Tab(text: 'Activities'), Tab(text: 'Impact')],
         ),
       ),
     );
@@ -707,6 +708,317 @@ class _PostActivitySheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Activities Tab ───────────────────────────────────────────────────────────
+// For both NGOs and Welfare Homes — schedule events, camps, resident activities
+
+class _ActivitiesTab extends StatefulWidget {
+  final String uid;
+  const _ActivitiesTab({required this.uid});
+
+  @override
+  State<_ActivitiesTab> createState() => _ActivitiesTabState();
+}
+
+class _ActivitiesTabState extends State<_ActivitiesTab> {
+  void _showAddSheet() {
+    final titleCtrl = TextEditingController();
+    final descCtrl  = TextEditingController();
+    final dateCtrl  = TextEditingController();
+    DateTime? picked;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AidColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) {
+          bool saving = false;
+          return Padding(
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(
+                      color: AidColors.borderDefault,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const Gap(16),
+                Text('Add Activity', style: AidTextStyles.headingMd),
+                const Gap(4),
+                Text('Schedule events, camps, drives, or resident activities',
+                    style: AidTextStyles.bodySm),
+                const Gap(16),
+                TextField(
+                  controller: titleCtrl,
+                  autofocus: true,
+                  style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Activity name *',
+                    hintText: 'e.g. Morning Yoga, Medical Camp, Food Drive',
+                  ),
+                ),
+                const Gap(12),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 2,
+                  style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Details (optional)',
+                    hintText: 'Location, instructions, what to bring…',
+                  ),
+                ),
+                const Gap(12),
+                TextField(
+                  controller: dateCtrl,
+                  readOnly: true,
+                  style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Date',
+                    hintText: 'Tap to pick',
+                    suffixIcon: Icon(Icons.calendar_month_rounded, size: 18),
+                  ),
+                  onTap: () async {
+                    final d = await showDatePicker(
+                      context: ctx,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (d != null) {
+                      picked = d;
+                      dateCtrl.text = '${d.day}/${d.month}/${d.year}';
+                      setS(() {});
+                    }
+                  },
+                ),
+                const Gap(20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            if (titleCtrl.text.trim().isEmpty) return;
+                            setS(() => saving = true);
+                            await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(widget.uid)
+                                .collection('activities')
+                                .add({
+                              'title': titleCtrl.text.trim(),
+                              'description': descCtrl.text.trim(),
+                              'date': picked != null ? Timestamp.fromDate(picked!) : null,
+                              'status': 'upcoming',
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AidColors.ngoAccent,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: saving
+                        ? const SizedBox(
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Text('Save Activity', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.uid)
+              .collection('activities')
+              .orderBy('createdAt', descending: true)
+              .snapshots(),
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent));
+            }
+            final docs = snap.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('📅', style: TextStyle(fontSize: 48)),
+                      const Gap(16),
+                      Text('No activities yet', style: AidTextStyles.headingMd),
+                      const Gap(8),
+                      Text(
+                        'Tap the button below to schedule a drive, camp, event or resident activity.',
+                        style: AidTextStyles.bodySm,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+            return ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+              itemCount: docs.length,
+              separatorBuilder: (_, __) => const Gap(10),
+              itemBuilder: (_, i) {
+                final data = docs[i].data() as Map<String, dynamic>;
+                final date = data['date'] != null
+                    ? (data['date'] as Timestamp).toDate()
+                    : null;
+                final isPast = date != null && date.isBefore(DateTime.now());
+
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AidColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isPast
+                          ? AidColors.borderDefault
+                          : AidColors.ngoAccent.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Date badge
+                      Container(
+                        width: 50,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isPast
+                              ? AidColors.elevated
+                              : AidColors.ngoAccent.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              date != null
+                                  ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.month - 1]
+                                  : '—',
+                              style: TextStyle(
+                                color: isPast ? AidColors.textMuted : AidColors.ngoAccent,
+                                fontSize: 10, fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              date != null ? '${date.day}' : '?',
+                              style: TextStyle(
+                                color: isPast ? AidColors.textMuted : AidColors.ngoAccent,
+                                fontSize: 20, fontWeight: FontWeight.w800, height: 1.1,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Gap(12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(data['title'] ?? '', style: AidTextStyles.headingSm),
+                            if ((data['description'] ?? '').isNotEmpty) ...[
+                              const Gap(2),
+                              Text(
+                                data['description'],
+                                style: AidTextStyles.bodySm,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const Gap(8),
+                      Column(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: (isPast ? AidColors.textMuted : AidColors.ngoAccent)
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isPast ? 'DONE' : 'UPCOMING',
+                              style: AidTextStyles.labelSm.copyWith(
+                                color: isPast ? AidColors.textMuted : AidColors.ngoAccent,
+                                fontWeight: FontWeight.w800, fontSize: 8,
+                              ),
+                            ),
+                          ),
+                          const Gap(6),
+                          GestureDetector(
+                            onTap: () async {
+                              await FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(widget.uid)
+                                  .collection('activities')
+                                  .doc(docs[i].id)
+                                  .delete();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AidColors.error.withValues(alpha: 0.08),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.delete_outline_rounded,
+                                  size: 14, color: AidColors.error),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            heroTag: 'addActivity',
+            onPressed: _showAddSheet,
+            backgroundColor: AidColors.ngoAccent,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.event_rounded, size: 18),
+            label: const Text('Add Activity',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          ),
+        ),
+      ],
     );
   }
 }

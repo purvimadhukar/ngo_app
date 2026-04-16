@@ -56,7 +56,7 @@ class RoleRouter extends StatelessWidget {
               case 'manager':
                 return const ManagerDashboard();
               case 'careHome':
-                return const CareHomeDashboard();
+                return const NgoDashboard(); // Welfare homes share the NGO dashboard
               case '__missing__':
                 return _RolePickerScaffold(uid: user.uid, user: user);
               default:

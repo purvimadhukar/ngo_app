@@ -28,6 +28,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   String   _category  = 'food';
   double   _urgency   = 0.5;
   bool     _loading   = false;
+  String   _loadingMsg = 'Publishing…';
 
   final List<XFile>    _selectedMedia  = [];
   final List<Uint8List> _previewBytes  = [];
@@ -65,16 +66,18 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() { _loading = true; _loadingMsg = _selectedMedia.isNotEmpty ? 'Uploading images…' : 'Publishing…'; });
     try {
       final user = AuthService.instance.currentUser!;
 
-      // Upload images
-      final mediaUrls = <String>[];
-      for (final file in _selectedMedia) {
-        final url = await PostService.uploadMedia(file, user.uid);
-        mediaUrls.add(url);
-      }
+      // Upload all images in parallel — much faster than sequential
+      final mediaUrls = _selectedMedia.isEmpty
+          ? <String>[]
+          : await Future.wait(
+              _selectedMedia.map((f) => PostService.uploadMedia(f, user.uid)),
+            );
+
+      if (mounted) setState(() => _loadingMsg = 'Saving post…');
 
       final post = NgoPost(
         id: '',
@@ -146,10 +149,17 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         title: Text('New Post', style: AidTextStyles.headingMd),
         actions: [
           if (_loading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: SizedBox(width: 20, height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AidColors.ngoAccent)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(width: 16, height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: AidColors.ngoAccent)),
+                  const Gap(8),
+                  Text(_loadingMsg, style: AidTextStyles.labelMd.copyWith(color: AidColors.ngoAccent)),
+                ],
+              ),
             )
           else
             Padding(
