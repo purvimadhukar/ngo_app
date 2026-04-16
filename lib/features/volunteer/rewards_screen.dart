@@ -139,7 +139,7 @@ class _ProgressBar extends StatelessWidget {
         .toList()
       ..sort((a, b) => a.pointsRequired.compareTo(b.pointsRequired));
 
-    RewardRewardBadge? nextBadge;
+    RewardRewardRewardBadge? nextBadge;
     int prevPoints = 0;
     for (final badge in sorted) {
       if (points < badge.pointsRequired) {
