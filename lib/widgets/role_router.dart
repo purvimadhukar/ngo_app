@@ -35,8 +35,11 @@ class RoleRouter extends StatelessWidget {
             }
 
             if (roleSnap.hasError || !roleSnap.hasData) {
-              AuthService.instance.signOut();
-              return _ErrorScaffold(message: roleSnap.error?.toString());
+              // Don't auto-signout — show error so user can see what's wrong
+              return _ErrorScaffold(
+                message: roleSnap.error?.toString() ?? 'Could not load role.',
+                onSignOut: () => AuthService.instance.signOut(),
+              );
             }
 
             switch (roleSnap.data!) {
@@ -51,10 +54,10 @@ class RoleRouter extends StatelessWidget {
               case 'manager':
                 return const ManagerDashboard();
               default:
-                // Fallback for unknown roles → show login with sign out
-                AuthService.instance.signOut();
                 return _ErrorScaffold(
-                    message: 'Unknown role "${roleSnap.data}". Please contact support.');
+                  message: 'Unknown role: "${roleSnap.data}". Must be ngo, donor, volunteer, admin, or manager.',
+                  onSignOut: () => AuthService.instance.signOut(),
+                );
             }
           },
         );
@@ -90,7 +93,8 @@ class _LoadingScaffold extends StatelessWidget {
 
 class _ErrorScaffold extends StatelessWidget {
   final String? message;
-  const _ErrorScaffold({this.message});
+  final VoidCallback? onSignOut;
+  const _ErrorScaffold({this.message, this.onSignOut});
 
   @override
   Widget build(BuildContext context) {
@@ -108,18 +112,25 @@ class _ErrorScaffold extends StatelessWidget {
                 'Could not load your account.',
                 style: TextStyle(color: Colors.white, fontSize: 16),
               ),
-              if (message != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  message!,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+              const SizedBox(height: 8),
+              // Show full error so we can debug
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  message ?? 'Unknown error',
+                  style: const TextStyle(color: Colors.red, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
-              ],
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => AuthService.instance.signOut(),
-                child: const Text('Sign out'),
+                onPressed: onSignOut ?? () => AuthService.instance.signOut(),
+                child: const Text('Sign out & try again'),
               ),
             ],
           ),
