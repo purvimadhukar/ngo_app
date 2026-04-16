@@ -477,6 +477,40 @@ class _NgoPostCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    const Gap(8),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert_rounded, color: AidColors.textMuted, size: 20),
+                      color: AidColors.surface,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      onSelected: (value) => _handleMenu(context, value),
+                      itemBuilder: (_) => [
+                        const PopupMenuItem(
+                          value: 'fulfill',
+                          child: Row(children: [
+                            Icon(Icons.check_circle_outline, size: 16, color: AidColors.success),
+                            Gap(8),
+                            Text('Mark Fulfilled'),
+                          ]),
+                        ),
+                        const PopupMenuItem(
+                          value: 'cancel',
+                          child: Row(children: [
+                            Icon(Icons.cancel_outlined, size: 16, color: AidColors.warning),
+                            Gap(8),
+                            Text('Cancel Post'),
+                          ]),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'delete',
+                          child: Row(children: [
+                            Icon(Icons.delete_outline_rounded, size: 16, color: AidColors.error),
+                            Gap(8),
+                            Text('Delete', style: TextStyle(color: AidColors.error)),
+                          ]),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ],
@@ -502,6 +536,53 @@ class _NgoPostCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _handleMenu(BuildContext context, String value) async {
+    if (value == 'delete') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AidColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Delete post?', style: AidTextStyles.headingMd),
+          content: Text(
+            'This will permanently delete "${post.title}" and all associated data.',
+            style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: AidColors.error),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await FirebaseFirestore.instance.collection('posts').doc(post.id).delete();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Post deleted'), backgroundColor: AidColors.error),
+          );
+        }
+      }
+    } else {
+      final newStatus = value == 'fulfill' ? 'fulfilled' : 'cancelled';
+      await FirebaseFirestore.instance.collection('posts').doc(post.id).update({'status': newStatus});
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Post marked as $newStatus'),
+            backgroundColor: value == 'fulfill' ? AidColors.success : AidColors.warning,
+          ),
+        );
+      }
+    }
   }
 
   void _showActivity(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gap/gap.dart';
@@ -354,7 +355,6 @@ class _FeedTab extends StatelessWidget {
   Widget build(BuildContext context) {
     Query query = FirebaseFirestore.instance
         .collection('posts')
-        .where('ngoVerified', isEqualTo: true)
         .where('status', isEqualTo: 'active')
         .where('flaggedForReview', isEqualTo: false)
         .orderBy('urgencyScore', descending: true);
@@ -570,6 +570,30 @@ class _DonorPostCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(color: AidColors.elevated, borderRadius: BorderRadius.circular(99)),
                         child: Text(post.category, style: AidTextStyles.labelMd),
+                      ),
+                      const Gap(8),
+                      // Share button
+                      IconButton(
+                        onPressed: () {
+                          final shareText = '🤝 Help needed: ${post.title}\n'
+                              'By ${post.ngoName}\n\n'
+                              '${post.description}\n\n'
+                              'Join AidBridge to donate or volunteer!';
+                          Clipboard.setData(ClipboardData(text: shareText));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Share text copied to clipboard!'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.share_outlined, size: 18),
+                        color: AidColors.textMuted,
+                        style: IconButton.styleFrom(
+                          backgroundColor: AidColors.elevated,
+                          shape: const CircleBorder(),
+                          padding: const EdgeInsets.all(8),
+                        ),
                       ),
                       const Spacer(),
                       FilledButton(
