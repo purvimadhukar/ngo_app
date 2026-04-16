@@ -35,7 +35,7 @@ class BadgeCatalog {
     RewardBadge(id: 'consistent',   name: 'Consistent',        description: '3 activities in a row',       icon: '🔥', pointsRequired: 75,   tier: 'bronze'),
   ];
 
-  static RewardRewardRewardBadge? findById(String id) =>
+  static RewardBadge? findById(String id) =>
       all.where((b) => b.id == id).firstOrNull;
 }
 
