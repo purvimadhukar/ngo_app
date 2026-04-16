@@ -60,8 +60,9 @@ class _SignupScreenState extends State<SignupScreen>
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() { _loading = true; _error = null; });
 
+    UserCredential? cred;
     try {
-      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passwordCtrl.text,
       );
@@ -97,6 +98,10 @@ class _SignupScreenState extends State<SignupScreen>
       if (mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message);
+    } catch (e) {
+      // Firestore write failed — delete the Auth account so user can retry cleanly
+      await cred?.user?.delete();
+      setState(() => _error = 'Account setup failed. Please try again. ($e)');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

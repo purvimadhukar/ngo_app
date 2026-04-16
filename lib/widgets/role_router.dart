@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:gap/gap.dart';
 
 import '../services/auth_service.dart';
 import '../features/auth/login_screen.dart';
@@ -53,11 +54,10 @@ class RoleRouter extends StatelessWidget {
                 return const AdminDashboard();
               case 'manager':
                 return const ManagerDashboard();
+              case '__missing__':
+                return _RolePickerScaffold(uid: user.uid, user: user);
               default:
-                return _ErrorScaffold(
-                  message: 'Unknown role: "${roleSnap.data}". Must be ngo, donor, volunteer, admin, or manager.',
-                  onSignOut: () => AuthService.instance.signOut(),
-                );
+                return _RolePickerScaffold(uid: user.uid, user: user);
             }
           },
         );
@@ -70,10 +70,125 @@ class RoleRouter extends StatelessWidget {
         .collection('users')
         .doc(uid)
         .get();
-    if (!doc.exists) throw Exception('User document not found for uid=$uid');
+    if (!doc.exists) return '__missing__';
     final role = doc.data()?['role'] as String?;
-    if (role == null || role.isEmpty) throw Exception('Role not set for uid=$uid');
+    if (role == null || role.isEmpty) return '__missing__';
     return role;
+  }
+}
+
+// ── Role Picker (shown when Firestore doc is missing) ─────────────────────────
+
+class _RolePickerScaffold extends StatefulWidget {
+  final String uid;
+  final User user;
+  const _RolePickerScaffold({required this.uid, required this.user});
+
+  @override
+  State<_RolePickerScaffold> createState() => _RolePickerScaffoldState();
+}
+
+class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
+  String _role = 'donor';
+  bool _saving = false;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await FirebaseFirestore.instance.collection('users').doc(widget.uid).set({
+      'email': widget.user.email ?? '',
+      'name': widget.user.displayName ?? widget.user.email ?? 'User',
+      'role': _role,
+      'ngoVerified': false,
+      'rewardPoints': 0,
+      'activitiesJoined': 0,
+      'badges': [],
+      'totalDonations': 0,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    // Auth state will auto-refresh and re-route
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0D0F),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Welcome to AidBridge!',
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+              const Gap(8),
+              const Text('Choose your role to continue',
+                  style: TextStyle(color: Colors.grey, fontSize: 14)),
+              const Gap(32),
+              _roleOption('donor', '💜', 'Donor', 'Donate food, clothes & more'),
+              const Gap(12),
+              _roleOption('volunteer', '🧡', 'Volunteer', 'Join activities & earn rewards'),
+              const Gap(12),
+              _roleOption('ngo', '💚', 'NGO', 'Post needs & manage drives'),
+              const Gap(32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _save,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1DB884),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _saving
+                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      : const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const Gap(16),
+              TextButton(
+                onPressed: () => AuthService.instance.signOut(),
+                child: const Text('Sign out', style: TextStyle(color: Colors.grey)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _roleOption(String value, String emoji, String label, String subtitle) {
+    final selected = _role == value;
+    return GestureDetector(
+      onTap: () => setState(() => _role = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF1DB884).withValues(alpha: 0.1) : const Color(0xFF141416),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? const Color(0xFF1DB884) : const Color(0xFF222228),
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const Gap(14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
+            ),
+            if (selected) const Icon(Icons.check_circle_rounded, color: Color(0xFF1DB884)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
