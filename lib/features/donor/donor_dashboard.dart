@@ -748,13 +748,11 @@ class _ImpactStatsCard extends StatelessWidget {
           }
         }
 
-        return FutureBuilder<AggregateQuerySnapshot>(
-          future: FirebaseFirestore.instance
-              .collectionGroup('donations')
-              .count()
-              .get(),
-          builder: (context, donSnap) {
-            final totalDonations = donSnap.data?.count ?? 0;
+        // Use posts.length as proxy for donations count (no collectionGroup needed)
+        final totalDonations = posts.fold<int>(0, (sum, doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          return sum + ((data['donationCount'] ?? 0) as num).toInt();
+        });
 
             return Container(
               margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -818,8 +816,6 @@ class _ImpactStatsCard extends StatelessWidget {
                 ],
               ),
             );
-          },
-        );
       },
     );
   }
