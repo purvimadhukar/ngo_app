@@ -156,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                           // ── Sign-in button ────────────────────────────────
                           _buildSignInButton(),
+                          _buildDevBar(),
                           const SizedBox(height: 20),
 
                           // ── Sign-up link ──────────────────────────────────
@@ -321,6 +322,54 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ],
       ),
+    );
+  }
+
+  // ── DEV quick-login accounts (remove before going live) ──────────────────────
+  static const _devAccounts = [
+    {'label': '💚 NGO', 'email': 'majorprojectclaude@gmail.com', 'pass': 'purvi123'},
+  ];
+
+  Widget _buildDevBar() {
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Expanded(child: Divider(color: Color(0xFF222228))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text('DEV QUICK LOGIN',
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 10, letterSpacing: 0.8)),
+            ),
+            const Expanded(child: Divider(color: Color(0xFF222228))),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _devAccounts.map((a) {
+            return GestureDetector(
+              onTap: () async {
+                _emailController.text = a['email']!;
+                _passwordController.text = a['pass']!;
+                await _signIn();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF17171A),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF2A2A32)),
+                ),
+                child: Text(a['label']!, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 4),
+      ],
     );
   }
 
