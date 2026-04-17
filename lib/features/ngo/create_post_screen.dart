@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:gap/gap.dart';
 
@@ -66,23 +67,38 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
-    setState(() { _loading = true; _loadingMsg = _selectedMedia.isNotEmpty ? 'Uploading images…' : 'Publishing…'; });
+    setState(() { _loading = true; _loadingMsg = 'Saving post…'; });
     try {
       final user = AuthService.instance.currentUser!;
 
-      // Upload all images in parallel — much faster than sequential
-      final mediaUrls = _selectedMedia.isEmpty
-          ? <String>[]
-          : await Future.wait(
-              _selectedMedia.map((f) => PostService.uploadMedia(f, user.uid)),
-            );
+      // Try image upload — if it fails (CORS/Storage rules), post without images
+      List<String> mediaUrls = [];
+      if (_selectedMedia.isNotEmpty) {
+        if (mounted) setState(() => _loadingMsg = 'Uploading images…');
+        try {
+          mediaUrls = await Future.wait(
+            _selectedMedia.map((f) => PostService.uploadMedia(f, user.uid)),
+          ).timeout(const Duration(seconds: 30));
+        } catch (uploadErr) {
+          // Image upload failed — continue posting without images
+          mediaUrls = [];
+          if (mounted) setState(() => _loadingMsg = 'Saving post (no images)…');
+        }
+      }
 
       if (mounted) setState(() => _loadingMsg = 'Saving post…');
+
+      // Get NGO name from Firestore profile
+      String ngoName = user.displayName ?? 'NGO';
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        ngoName = doc.data()?['orgName'] ?? doc.data()?['name'] ?? ngoName;
+      } catch (_) {}
 
       final post = NgoPost(
         id: '',
         ngoId:      user.uid,
-        ngoName:    user.displayName ?? 'NGO',
+        ngoName:    ngoName,
         ngoVerified: false,
         title:       _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
@@ -115,10 +131,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       await PostService.createPost(post);
       if (mounted) {
         _snack('Post published! 🎉', AidColors.success);
-        Navigator.pop(context);
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) _snack('Error: $e', AidColors.error);
+      if (mounted) _snack('Failed to post: ${e.toString().substring(0, e.toString().length.clamp(0, 120))}', AidColors.error);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

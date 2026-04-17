@@ -16,6 +16,8 @@ import 'donation_detail_screen.dart';
 import 'donation_history_screen.dart';
 import 'donor_groups_screen.dart';
 import 'featured_cause_screen.dart';
+import 'impact_group_screen.dart';
+import '../../models/impact_group.dart';
 
 class DonorDashboard extends StatefulWidget {
   const DonorDashboard({super.key});
@@ -355,11 +357,11 @@ class _FeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Simple query — no compound index needed
     Query query = FirebaseFirestore.instance
         .collection('posts')
         .where('status', isEqualTo: 'active')
-        .where('flaggedForReview', isEqualTo: false)
-        .orderBy('urgencyScore', descending: true);
+        .orderBy('createdAt', descending: true);
 
     if (filterCategory != 'All') {
       query = query.where('category', isEqualTo: filterCategory);
@@ -371,6 +373,8 @@ class _FeedTab extends StatelessWidget {
         const _ImpactStatsCard(),
         // ── Services Grid ─────────────────────────────────────────────
         _ServicesGrid(onCategoryTap: onFilterChanged),
+        // ── See → Feel → Act Impact Groups ────────────────────────────
+        const _ImpactGroupsRow(),
         // Category chips
         SizedBox(
           height: 52,
@@ -854,6 +858,162 @@ class _ImpactStatsCard extends StatelessWidget {
     if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
     return v.toInt().toString();
   }
+}
+
+// ─── Impact Groups Row ────────────────────────────────────────────────────────
+
+class _ImpactGroupsRow extends StatelessWidget {
+  const _ImpactGroupsRow();
+
+  static const _typeColors = {
+    'children': Color(0xFFFF9800),
+    'elderly':  Color(0xFF7C3AED),
+    'women':    Color(0xFFE91E63),
+    'general':  Color(0xFF1DB884),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('impactGroups')
+          .orderBy('createdAt', descending: true)
+          .limit(10)
+          .snapshots(),
+      builder: (context, snap) {
+        final docs = snap.data?.docs ?? [];
+        if (docs.isEmpty) return const SizedBox.shrink();
+
+        final groups = docs.map((d) => ImpactGroup.fromFirestore(d)).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              child: Row(
+                children: [
+                  Text('See · Feel · Act', style: AidTextStyles.headingMd),
+                  const Gap(6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AidColors.donorAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('LIVE', style: AidTextStyles.labelSm.copyWith(
+                      color: AidColors.donorAccent, fontWeight: FontWeight.w800, fontSize: 9,
+                    )),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 220,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: groups.length,
+                separatorBuilder: (_, __) => const Gap(12),
+                itemBuilder: (_, i) => _ImpactGroupCard(group: groups[i]),
+              ),
+            ),
+            const Gap(6),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ImpactGroupCard extends StatelessWidget {
+  final ImpactGroup group;
+  const _ImpactGroupCard({required this.group});
+
+  Color get _color {
+    switch (group.type) {
+      case ImpactGroupType.children: return const Color(0xFFFF9800);
+      case ImpactGroupType.elderly:  return const Color(0xFF7C3AED);
+      case ImpactGroupType.women:    return const Color(0xFFE91E63);
+      case ImpactGroupType.general:  return AidColors.ngoAccent;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => ImpactGroupScreen(group: group))),
+      child: Container(
+        width: 180,
+        decoration: BoxDecoration(
+          color: AidColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image or color hero
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: SizedBox(
+                height: 110,
+                width: double.infinity,
+                child: group.imageUrls.isNotEmpty
+                    ? Image.network(group.imageUrls.first, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _colorHero())
+                    : _colorHero(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Type chip
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: _color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${group.type.emoji} ${group.type.label}',
+                      style: AidTextStyles.labelSm.copyWith(
+                        color: _color, fontWeight: FontWeight.w700, fontSize: 9,
+                      ),
+                    ),
+                  ),
+                  const Gap(5),
+                  Text(
+                    group.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AidTextStyles.headingSm.copyWith(fontSize: 12, height: 1.3),
+                  ),
+                  const Gap(4),
+                  Row(
+                    children: [
+                      Icon(Icons.people_rounded, size: 11, color: _color),
+                      const Gap(3),
+                      Text('${group.beneficiaryCount} people',
+                          style: AidTextStyles.labelSm.copyWith(color: _color, fontSize: 10)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _colorHero() => Container(
+    color: _color.withValues(alpha: 0.15),
+    child: Center(child: Text(group.type.emoji, style: const TextStyle(fontSize: 40))),
+  );
 }
 
 // ─── Services Grid ────────────────────────────────────────────────────────────
