@@ -119,10 +119,41 @@ class _NgoDashboardState extends State<NgoDashboard>
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 16, 0),
+    // Derive initials from org name for avatar
+    final parts = _ngoName.split(' ').where((w) => w.isNotEmpty).toList();
+    final initials = parts.length >= 2
+        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+        : _ngoName.isNotEmpty
+            ? _ngoName[0].toUpperCase()
+            : 'N';
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: AidColors.borderSubtle, width: 1)),
+      ),
       child: Row(
         children: [
+          // Avatar
+          Container(
+            width: 44, height: 44,
+            decoration: BoxDecoration(
+              color: AidColors.ngoAccent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AidColors.ngoAccent.withValues(alpha: 0.3)),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color: AidColors.ngoAccent,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ),
+          const Gap(12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,47 +161,26 @@ class _NgoDashboardState extends State<NgoDashboard>
                 Row(
                   children: [
                     Text(
-                      'AidBridge NGO',
-                      style: AidTextStyles.caption.copyWith(
-                        color: AidColors.ngoAccent,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
+                      _ngoName,
+                      style: AidTextStyles.headingMd.copyWith(fontSize: 17),
                     ),
                     if (_ngoVerified) ...[
                       const Gap(6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AidColors.ngoAccent.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.verified_rounded, size: 10, color: AidColors.ngoAccent),
-                            const Gap(3),
-                            Text(
-                              'VERIFIED',
-                              style: AidTextStyles.labelSm.copyWith(
-                                color: AidColors.ngoAccent,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const Icon(Icons.verified_rounded, size: 15, color: AidColors.ngoAccent),
                     ],
                   ],
                 ),
-                Text(_ngoName, style: AidTextStyles.heading.copyWith(fontSize: 22)),
+                Text(
+                  'NGO Dashboard',
+                  style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
+                ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AidColors.textMuted, size: 22),
+            icon: const Icon(Icons.logout_rounded, color: AidColors.textMuted, size: 20),
             onPressed: () => AuthService.instance.signOut(),
+            tooltip: 'Sign out',
           ),
         ],
       ),
@@ -180,41 +190,41 @@ class _NgoDashboardState extends State<NgoDashboard>
   Widget _buildVerificationBanner(BuildContext context) {
     final isPending = _verificationStatus == 'pending';
     final isRejected = _verificationStatus == 'rejected';
-    final color = isPending ? AidColors.warning : isRejected ? AidColors.error : AidColors.info;
-    final icon = isPending ? Icons.hourglass_top_rounded : isRejected ? Icons.cancel_rounded : Icons.verified_user_outlined;
+    final color = isPending ? AidColors.warning : isRejected ? AidColors.error : AidColors.ngoAccent;
     final msg = isPending
-        ? 'Verification under review — we\'ll notify you when approved'
+        ? 'Verification under review'
         : isRejected
-            ? 'Verification rejected. Tap to re-submit with correct documents'
-            : 'Verify your NGO to build donor trust and unlock more visibility';
+            ? 'Verification rejected — tap to resubmit'
+            : 'Get verified to unlock full visibility';
 
     return GestureDetector(
-      onTap: () => Navigator.push(
+      onTap: isPending ? null : () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const NgoVerificationScreen()),
       ).then((_) => _loadProfile()),
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          color: color.withValues(alpha: 0.07),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: color, size: 18),
+            Container(
+              width: 6, height: 6,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
             const Gap(10),
-            Expanded(child: Text(msg, style: AidTextStyles.caption.copyWith(color: color))),
+            Expanded(
+              child: Text(msg, style: AidTextStyles.labelMd.copyWith(color: color)),
+            ),
             if (!isPending) ...[
               const Gap(8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(99)),
-                child: Text(
-                  isRejected ? 'Re-apply' : 'Apply',
-                  style: AidTextStyles.caption.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
-                ),
+              Text(
+                isRejected ? 'Resubmit →' : 'Apply →',
+                style: AidTextStyles.labelMd.copyWith(color: color, fontWeight: FontWeight.w700),
               ),
             ],
           ],
@@ -225,31 +235,50 @@ class _NgoDashboardState extends State<NgoDashboard>
 
   Widget _buildStats(String uid) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('posts').where('ngoId', isEqualTo: uid).snapshots(),
+      stream: FirebaseFirestore.instance
+          .collection('posts')
+          .where('ngoId', isEqualTo: uid)
+          .snapshots(),
       builder: (context, snap) {
         final docs = snap.data?.docs ?? [];
-        final total = docs.length;
+        final total  = docs.length;
         final active = docs.where((d) => (d.data() as Map)['status'] == 'active').length;
+        final fulfilled = docs.where((d) => (d.data() as Map)['status'] == 'fulfilled').length;
+
         return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: Row(
-            children: [
-              _StatChip(label: 'Posts', value: '$total', icon: Icons.article_outlined, color: AidColors.ngoAccent),
-              const Gap(8),
-              _StatChip(label: 'Active', value: '$active', icon: Icons.radio_button_checked, color: AidColors.success),
-              const Gap(8),
-              _StatChip(
-                label: 'Status',
-                value: _ngoVerified ? 'Verified' : 'Unverified',
-                icon: Icons.verified_outlined,
-                color: _ngoVerified ? AidColors.ngoAccent : AidColors.textMuted,
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+            decoration: BoxDecoration(
+              color: AidColors.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AidColors.borderSubtle),
+            ),
+            child: Row(
+              children: [
+                _QuickStat(value: '$total',     label: 'Total Posts'),
+                _vDivider(),
+                _QuickStat(value: '$active',    label: 'Active',    color: AidColors.success),
+                _vDivider(),
+                _QuickStat(value: '$fulfilled', label: 'Fulfilled', color: AidColors.ngoAccent),
+                _vDivider(),
+                _QuickStat(
+                  value: _ngoVerified ? 'Yes' : 'No',
+                  label: 'Verified',
+                  color: _ngoVerified ? AidColors.ngoAccent : AidColors.textMuted,
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
+
+  Widget _vDivider() => Container(
+    width: 1, height: 32, margin: const EdgeInsets.symmetric(horizontal: 12),
+    color: AidColors.borderDefault,
+  );
 
   Widget _buildTabBar() {
     return Padding(
@@ -281,18 +310,25 @@ class _MyPostsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // No orderBy — avoids composite index requirement; sort client-side
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('posts')
           .where('ngoId', isEqualTo: uid)
-          .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent));
+          return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent, strokeWidth: 2));
         }
-        final docs = snap.data?.docs ?? [];
-        if (docs.isEmpty) return _EmptyPosts();
+        final rawDocs = snap.data?.docs ?? [];
+        // Sort by createdAt descending, client-side
+        final docs = [...rawDocs]..sort((a, b) {
+            final aTs = (a.data() as Map)['createdAt'] as Timestamp?;
+            final bTs = (b.data() as Map)['createdAt'] as Timestamp?;
+            if (aTs == null || bTs == null) return 0;
+            return bTs.compareTo(aTs);
+          });
+        if (docs.isEmpty) return const _EmptyState(icon: Icons.article_outlined, title: 'No posts yet', sub: 'Tap + New Post to create your first donation drive or volunteer event.');
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
           itemCount: docs.length,
@@ -300,38 +336,6 @@ class _MyPostsTab extends StatelessWidget {
           itemBuilder: (_, i) => _NgoPostCard(post: NgoPost.fromFirestore(docs[i])),
         );
       },
-    );
-  }
-}
-
-class _EmptyPosts extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                color: AidColors.ngoAccent.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.post_add_rounded, size: 40, color: AidColors.ngoAccent),
-            ),
-            const Gap(20),
-            Text('No posts yet', style: AidTextStyles.headingMd),
-            const Gap(8),
-            Text(
-              'Tap + New Post to create your first donation drive or volunteer event.',
-              style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -545,17 +549,32 @@ class _NgoPostCard extends StatelessWidget {
 
   Widget _placeholderBanner() {
     return Container(
-      height: 70,
+      height: 56,
       decoration: BoxDecoration(
-        color: _typeColor.withValues(alpha: 0.07),
+        color: _typeColor.withValues(alpha: 0.06),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Center(
-        child: Icon(
-          post.type == PostType.activity ? Icons.event_rounded : Icons.volunteer_activism_rounded,
-          color: _typeColor.withValues(alpha: 0.4),
-          size: 30,
-        ),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              color: _typeColor,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16)),
+            ),
+          ),
+          const Gap(14),
+          Text(
+            _typeLabel.toUpperCase(),
+            style: TextStyle(
+              color: _typeColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -966,24 +985,10 @@ class _ImpactGroupsTabState extends State<_ImpactGroupsTab> {
           builder: (context, snap) {
             final docs = snap.data?.docs ?? [];
             if (docs.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('👥', style: TextStyle(fontSize: 48)),
-                      const Gap(16),
-                      Text('No impact groups yet', style: AidTextStyles.headingMd, textAlign: TextAlign.center),
-                      const Gap(8),
-                      Text(
-                        'Create consent-based group profiles for children, elderly, or women to help donors connect emotionally.',
-                        style: AidTextStyles.bodySm,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
+              return const _EmptyState(
+                icon: Icons.people_outline_rounded,
+                title: 'No beneficiary groups yet',
+                sub: 'Create consent-based group profiles for children, elderly, or women to connect donors emotionally.',
               );
             }
             return ListView.separated(
@@ -1207,24 +1212,10 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
             }
             final docs = snap.data?.docs ?? [];
             if (docs.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(40),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('📅', style: TextStyle(fontSize: 48)),
-                      const Gap(16),
-                      Text('No activities yet', style: AidTextStyles.headingMd),
-                      const Gap(8),
-                      Text(
-                        'Tap the button below to schedule a drive, camp, event or resident activity.',
-                        style: AidTextStyles.bodySm,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
+              return const _EmptyState(
+                icon: Icons.event_note_outlined,
+                title: 'No activities scheduled',
+                sub: 'Tap Add Activity to schedule a drive, camp, event or resident activity.',
               );
             }
             return ListView.separated(
@@ -1789,34 +1780,59 @@ class _ImpactTabState extends State<_ImpactTab> {
   }
 }
 
+// ─── Shared Empty State ───────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String sub;
+  const _EmptyState({required this.icon, required this.title, required this.sub});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 64, height: 64,
+              decoration: BoxDecoration(
+                color: AidColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AidColors.borderDefault),
+              ),
+              child: Icon(icon, size: 28, color: AidColors.textMuted),
+            ),
+            const Gap(20),
+            Text(title, style: AidTextStyles.headingMd, textAlign: TextAlign.center),
+            const Gap(8),
+            Text(sub, style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted), textAlign: TextAlign.center),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Shared widgets ───────────────────────────────────────────────────────────
 
-class _StatChip extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
+class _QuickStat extends StatelessWidget {
+  final String value, label;
   final Color color;
-  const _StatChip({required this.label, required this.value, required this.icon, required this.color});
+  const _QuickStat({required this.value, required this.label, this.color = AidColors.textPrimary});
 
   @override
   Widget build(BuildContext context) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 11),
-          decoration: BoxDecoration(
-            color: AidColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, size: 15, color: color),
-              const Gap(5),
-              Text(value, style: AidTextStyles.headingSm.copyWith(color: color)),
-              Text(label, style: AidTextStyles.labelSm),
-            ],
-          ),
-        ),
-      );
+    child: Column(
+      children: [
+        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800, height: 1)),
+        const Gap(3),
+        Text(label, style: AidTextStyles.labelSm.copyWith(color: AidColors.textMuted), textAlign: TextAlign.center),
+      ],
+    ),
+  );
 }
 
 class _MiniStat extends StatelessWidget {
