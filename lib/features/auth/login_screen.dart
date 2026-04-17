@@ -204,37 +204,64 @@ class _LoginScreenState extends State<LoginScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Icon badge
+        // Gradient icon badge — matches splash
         Container(
-          width: 52,
-          height: 52,
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
-            color: _green.withValues(alpha:0.12),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _green.withValues(alpha:0.3)),
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1DB884), Color(0xFF8B7FE8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1DB884).withValues(alpha: 0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: const Icon(
             Icons.volunteer_activism_rounded,
-            color: _green,
-            size: 26,
+            color: Colors.white,
+            size: 28,
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Welcome back',
-          style: TextStyle(
-            color: _textPrimary,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
+        RichText(
+          text: const TextSpan(
+            children: [
+              TextSpan(
+                text: 'Aid',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
+                  height: 1,
+                ),
+              ),
+              TextSpan(
+                text: 'Bridge',
+                style: TextStyle(
+                  color: Color(0xFF1DB884),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.2,
+                  height: 1,
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 6),
         const Text(
-          'Sign in to your AidBridge account',
+          'Sign in to continue making a difference',
           style: TextStyle(
             color: _textMuted,
-            fontSize: 15,
+            fontSize: 14,
           ),
         ),
       ],

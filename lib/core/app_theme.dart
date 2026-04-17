@@ -5,14 +5,62 @@ import 'package:flutter/services.dart';
 //  AidBridge Design Tokens
 // ─────────────────────────────────────────────
 
+// ─────────────────────────────────────────────
+//  Gradient helpers (Bold & Vibrant style)
+// ─────────────────────────────────────────────
+
+class AidGradients {
+  AidGradients._();
+
+  static const emerald = LinearGradient(
+    colors: [Color(0xFF1DB884), Color(0xFF0F9E6E)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const donor = LinearGradient(
+    colors: [Color(0xFF8B7FE8), Color(0xFF6356C8)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const volunteer = LinearGradient(
+    colors: [Color(0xFFE8654A), Color(0xFFD44A30)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const purple = LinearGradient(
+    colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const heroCard = LinearGradient(
+    colors: [Color(0xFF1A1A1F), Color(0xFF111115)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static LinearGradient roleGradient(String role) {
+    switch (role) {
+      case 'ngo':
+      case 'careHome': return emerald;
+      case 'donor':    return donor;
+      case 'volunteer':return volunteer;
+      default:         return emerald;
+    }
+  }
+}
+
 class AidColors {
   AidColors._();
 
   // Backgrounds
-  static const background  = Color(0xFF0D0D0F);
-  static const surface     = Color(0xFF141416);
-  static const elevated    = Color(0xFF1C1C1F);
-  static const overlay     = Color(0xFF242428);
+  static const background  = Color(0xFF0A0A0D);
+  static const surface     = Color(0xFF111116);
+  static const elevated    = Color(0xFF18181E);
+  static const overlay     = Color(0xFF222228);
 
   // Role accents
   static const ngoAccent       = Color(0xFF1DB884);
@@ -185,7 +233,7 @@ class AidTheme {
         surfaceTintColor: Colors.transparent,
         elevation:        0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: AidColors.borderSubtle, width: 1),
         ),
         margin: const EdgeInsets.symmetric(vertical: 6),
@@ -199,10 +247,12 @@ class AidTheme {
           disabledForegroundColor:AidColors.textTertiary,
           elevation:              0,
           shadowColor:            Colors.transparent,
-          textStyle:              AidTextStyles.labelLg.copyWith(color: AidColors.background),
-          padding:                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-          minimumSize:            const Size(0, 48),
+          textStyle:              AidTextStyles.labelLg.copyWith(
+            color: AidColors.background, fontWeight: FontWeight.w700,
+          ),
+          padding:                const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          minimumSize:            const Size(0, 52),
         ),
       ),
 
