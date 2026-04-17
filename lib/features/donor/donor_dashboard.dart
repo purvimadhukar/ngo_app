@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gap/gap.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_theme.dart';
 import '../../models/ngo_post.dart';
@@ -357,15 +358,13 @@ class _FeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Simple query — no compound index needed
-    Query query = FirebaseFirestore.instance
+    // ── IMPORTANT: Only orderBy('createdAt') — no compound where+orderBy
+    // because that requires a Firestore composite index.
+    // Status + category filtering is done CLIENT-SIDE below.
+    final stream = FirebaseFirestore.instance
         .collection('posts')
-        .where('status', isEqualTo: 'active')
-        .orderBy('createdAt', descending: true);
-
-    if (filterCategory != 'All') {
-      query = query.where('category', isEqualTo: filterCategory);
-    }
+        .orderBy('createdAt', descending: true)
+        .snapshots();
 
     return Column(
       children: [
@@ -373,6 +372,8 @@ class _FeedTab extends StatelessWidget {
         const _ImpactStatsCard(),
         // ── Services Grid ─────────────────────────────────────────────
         _ServicesGrid(onCategoryTap: onFilterChanged),
+        // ── Manasa Medical Trust — Featured Partner ───────────────────
+        const _ManasaFeaturedCard(),
         // ── See → Feel → Act Impact Groups ────────────────────────────
         const _ImpactGroupsRow(),
         // Category chips
@@ -411,19 +412,36 @@ class _FeedTab extends StatelessWidget {
 
         Expanded(
           child: StreamBuilder<QuerySnapshot>(
-            stream: query.snapshots(),
+            stream: stream,
             builder: (context, snap) {
               if (snap.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator(color: AidColors.donorAccent));
               }
-              final docs = snap.data?.docs ?? [];
+              if (snap.hasError) {
+                return _EmptyState(
+                  icon: Icons.error_outline_rounded,
+                  message: 'Could not load posts',
+                  sub: 'Check your internet connection and try again.',
+                );
+              }
+
+              // ── Client-side filter: active status + optional category ──
+              final allDocs = snap.data?.docs ?? [];
+              final docs = allDocs.where((d) {
+                final data = d.data() as Map<String, dynamic>;
+                if ((data['status'] as String?) != 'active') return false;
+                if (filterCategory != 'All' &&
+                    (data['category'] as String?) != filterCategory) return false;
+                return true;
+              }).toList();
+
               if (docs.isEmpty) {
                 return _EmptyState(
                   icon: Icons.volunteer_activism_outlined,
                   message: 'No posts right now',
                   sub: filterCategory == 'All'
-                      ? 'Verified NGOs haven\'t posted yet. Check back soon!'
-                      : 'No $filterCategory requests. Try a different category.',
+                      ? 'NGOs haven\'t posted yet — check back soon!'
+                      : 'No $filterCategory posts right now. Try another category.',
                 );
               }
               return ListView.separated(
@@ -718,6 +736,109 @@ class _MyDonationsTab extends StatelessWidget {
           },
         );
       },
+    );
+  }
+}
+
+// ─── Manasa Medical Trust — Featured Partner Card ────────────────────────────
+
+class _ManasaFeaturedCard extends StatelessWidget {
+  const _ManasaFeaturedCard();
+
+  static const _url = 'https://www.manasamedicaltrust.org';
+
+  Future<void> _open() async {
+    final uri = Uri.parse(_url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _open,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
+              blurRadius: 12, offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Logo placeholder
+            Container(
+              width: 52, height: 52,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: Text('🏠', style: TextStyle(fontSize: 26)),
+              ),
+            ),
+            const Gap(14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          '✦ PARTNER NGO',
+                          style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Gap(4),
+                  const Text(
+                    'Manasa Medical Trust',
+                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                  ),
+                  const Text(
+                    'Old age home & medical welfare, Hyderabad',
+                    style: TextStyle(color: Colors.white70, fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            const Gap(8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Visit', style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.w800, fontSize: 12)),
+                  Gap(4),
+                  Icon(Icons.open_in_new_rounded, color: Color(0xFF7C3AED), size: 13),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -148,7 +148,7 @@ class NgoPost {
       eventDetails: m['eventDetails'] != null
           ? EventDetails.fromMap(m['eventDetails'] as Map<String, dynamic>)
           : null,
-      createdAt: (m['createdAt'] as Timestamp).toDate(),
+      createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: m['updatedAt'] != null
           ? (m['updatedAt'] as Timestamp).toDate()
           : null,

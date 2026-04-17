@@ -36,7 +36,11 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final List<_ItemEntry> _items        = [];
   DateTime? _eventDate;
 
-  final _categories = ['food', 'clothes', 'medical', 'education', 'funds', 'other'];
+  final _categories = [
+    'food', 'medical', 'clothes', 'education', 'funds',
+    'old age home', 'shelter', 'children', 'women',
+    'disaster relief', 'environment', 'animals', 'other',
+  ];
   final _picker     = ImagePicker();
 
   @override
