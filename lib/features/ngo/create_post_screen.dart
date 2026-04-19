@@ -24,6 +24,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   final _contactNameCtrl  = TextEditingController();
   final _contactPhoneCtrl = TextEditingController();
   final _volunteersCtrl   = TextEditingController(text: '10');
+  final _targetAmountCtrl = TextEditingController();
 
   PostType _postType  = PostType.donation;
   String   _category  = 'food';
@@ -46,7 +47,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   @override
   void dispose() {
     _titleCtrl.dispose(); _descCtrl.dispose(); _locationCtrl.dispose();
-    _contactNameCtrl.dispose(); _contactPhoneCtrl.dispose(); _volunteersCtrl.dispose();
+    _contactNameCtrl.dispose(); _contactPhoneCtrl.dispose();
+    _volunteersCtrl.dispose(); _targetAmountCtrl.dispose();
     super.dispose();
   }
 
@@ -66,11 +68,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       _snack('Please pick an event date', AidColors.warning);
       return;
     }
-    if (_items.isEmpty && _postType == PostType.donation) {
-      _snack('Add at least one item you need', AidColors.warning);
-      return;
-    }
-
     setState(() { _loading = true; _loadingMsg = 'Saving post…'; });
     try {
       final user = AuthService.instance.currentUser!;
@@ -111,6 +108,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
         status:      PostStatus.active,
         mediaUrls:   mediaUrls,
         proofUrls:   [],
+        targetAmount: double.tryParse(_targetAmountCtrl.text.replaceAll(',', '')) ?? 0,
+        raisedAmount: 0,
         requiredItems: _items
             .where((i) => i.nameCtrl.text.isNotEmpty)
             .map((i) => RequiredItem(
@@ -287,6 +286,16 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             _field(controller: _descCtrl, label: 'Description *',
                 maxLines: 4,
                 validator: (v) => v!.isEmpty ? 'Required' : null),
+            const Gap(20),
+
+            // ── Fundraising target ────────────────────────────────────────────
+            _sectionLabel('Fundraising goal (optional)'),
+            _field(
+              controller: _targetAmountCtrl,
+              label: 'Target amount in ₹ (e.g. 50000)',
+              prefixIcon: Icons.currency_rupee_rounded,
+              keyboardType: TextInputType.number,
+            ),
             const Gap(20),
 
             // ── Urgency ───────────────────────────────────────────────────────

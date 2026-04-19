@@ -10,6 +10,7 @@ import '../../services/auth_service.dart';
 import 'create_post_screen.dart';
 import 'add_proof_screen.dart';
 import 'ngo_verification_screen.dart';
+import '../common/contact_us_screen.dart';
 
 class NgoDashboard extends StatefulWidget {
   const NgoDashboard({super.key});
@@ -22,13 +23,15 @@ class _NgoDashboardState extends State<NgoDashboard>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
   String _ngoName = 'Your NGO';
+  String _uid = '';
   bool _ngoVerified = false;
   String _verificationStatus = 'none'; // none | pending | rejected | approved
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 4, vsync: this);
+    _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _tab = TabController(length: 5, vsync: this);
     _loadProfile();
   }
 
@@ -80,37 +83,168 @@ class _NgoDashboardState extends State<NgoDashboard>
 
   @override
   Widget build(BuildContext context) {
-    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     return Scaffold(
       backgroundColor: AidColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CreatePostScreen()),
-        ),
-        backgroundColor: AidColors.ngoAccent,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('New Post', style: TextStyle(fontWeight: FontWeight.w600)),
+      body: Column(
+        children: [
+          _buildHeroHeader(),
+          if (!_ngoVerified) _buildVerificationBanner(context),
+          _buildTabBar(),
+          Expanded(
+            child: TabBarView(
+              controller: _tab,
+              children: [
+                _MyPostsTab(uid: _uid),
+                _ActivitiesTab(uid: _uid, ngoName: _ngoName),
+                _ImpactGroupsTab(uid: _uid, ngoName: _ngoName),
+                const _ResourcesTab(),
+                _ImpactTab(uid: _uid),
+              ],
+            ),
+          ),
+        ],
       ),
-      body: SafeArea(
+    );
+  }
+
+  Widget _buildHeroHeader() {
+    final parts = _ngoName.split(' ').where((w) => w.isNotEmpty).toList();
+    final initials = parts.length >= 2
+        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
+        : _ngoName.isNotEmpty ? _ngoName[0].toUpperCase() : 'N';
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF0A3D2E), Color(0xFF0F6E56), Color(0xFF1DB884)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
-            if (!_ngoVerified) _buildVerificationBanner(context),
-            _buildStats(uid),
-            _buildTabBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tab,
+            // ── Top bar ────────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+              child: Row(
                 children: [
-                  _MyPostsTab(uid: uid),
-                  _ActivitiesTab(uid: uid),
-                  _ImpactGroupsTab(uid: uid, ngoName: _ngoName),
-                  _ImpactTab(uid: uid),
+                  // Avatar
+                  Container(
+                    width: 48, height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.5),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w900, fontSize: 19,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Gap(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _ngoName,
+                                style: const TextStyle(
+                                  color: Colors.white, fontSize: 18,
+                                  fontWeight: FontWeight.w800, height: 1.2,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_ngoVerified) ...[
+                              const Gap(6),
+                              const Icon(Icons.verified_rounded, size: 16, color: Colors.white),
+                            ],
+                          ],
+                        ),
+                        Text(
+                          'NGO Dashboard',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // New Post button
+                  GestureDetector(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CreatePostScreen()),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(99),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_rounded, color: Colors.white, size: 16),
+                          Gap(5),
+                          Text('Post', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.contact_support_outlined, color: Colors.white.withValues(alpha: 0.6), size: 20),
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ContactUsScreen())),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.logout_rounded, color: Colors.white.withValues(alpha: 0.6), size: 20),
+                    onPressed: () => AuthService.instance.signOut(),
+                  ),
                 ],
               ),
+            ),
+            const Gap(18),
+
+            // ── Stats row ───────────────────────────────────────────────────────
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('posts')
+                  .where('ngoId', isEqualTo: _uid)
+                  .snapshots(),
+              builder: (context, snap) {
+                final docs = snap.data?.docs ?? [];
+                final total     = docs.length;
+                final active    = docs.where((d) => (d.data() as Map)['status'] == 'active').length;
+                final fulfilled = docs.where((d) => (d.data() as Map)['status'] == 'fulfilled').length;
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Row(
+                    children: [
+                      _HeroStat(value: '$total',     label: 'Total Posts'),
+                      _heroDivider(),
+                      _HeroStat(value: '$active',    label: 'Active'),
+                      _heroDivider(),
+                      _HeroStat(value: '$fulfilled', label: 'Fulfilled'),
+                      _heroDivider(),
+                      _HeroStat(
+                        value: _ngoVerified ? 'Yes' : 'No',
+                        label: 'Verified',
+                        highlight: _ngoVerified,
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -118,74 +252,10 @@ class _NgoDashboardState extends State<NgoDashboard>
     );
   }
 
-  Widget _buildHeader() {
-    // Derive initials from org name for avatar
-    final parts = _ngoName.split(' ').where((w) => w.isNotEmpty).toList();
-    final initials = parts.length >= 2
-        ? '${parts[0][0]}${parts[1][0]}'.toUpperCase()
-        : _ngoName.isNotEmpty
-            ? _ngoName[0].toUpperCase()
-            : 'N';
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AidColors.borderSubtle, width: 1)),
-      ),
-      child: Row(
-        children: [
-          // Avatar
-          Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(
-              color: AidColors.ngoAccent.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AidColors.ngoAccent.withValues(alpha: 0.3)),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: TextStyle(
-                  color: AidColors.ngoAccent,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ),
-          const Gap(12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      _ngoName,
-                      style: AidTextStyles.headingMd.copyWith(fontSize: 17),
-                    ),
-                    if (_ngoVerified) ...[
-                      const Gap(6),
-                      const Icon(Icons.verified_rounded, size: 15, color: AidColors.ngoAccent),
-                    ],
-                  ],
-                ),
-                Text(
-                  'NGO Dashboard',
-                  style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: AidColors.textMuted, size: 20),
-            onPressed: () => AuthService.instance.signOut(),
-            tooltip: 'Sign out',
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _heroDivider() => Container(
+    width: 1, height: 28, margin: const EdgeInsets.symmetric(horizontal: 12),
+    color: Colors.white.withValues(alpha: 0.2),
+  );
 
   Widget _buildVerificationBanner(BuildContext context) {
     final isPending = _verificationStatus == 'pending';
@@ -233,58 +303,12 @@ class _NgoDashboardState extends State<NgoDashboard>
     );
   }
 
-  Widget _buildStats(String uid) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('posts')
-          .where('ngoId', isEqualTo: uid)
-          .snapshots(),
-      builder: (context, snap) {
-        final docs = snap.data?.docs ?? [];
-        final total  = docs.length;
-        final active = docs.where((d) => (d.data() as Map)['status'] == 'active').length;
-        final fulfilled = docs.where((d) => (d.data() as Map)['status'] == 'fulfilled').length;
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-            decoration: BoxDecoration(
-              color: AidColors.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AidColors.borderSubtle),
-            ),
-            child: Row(
-              children: [
-                _QuickStat(value: '$total',     label: 'Total Posts'),
-                _vDivider(),
-                _QuickStat(value: '$active',    label: 'Active',    color: AidColors.success),
-                _vDivider(),
-                _QuickStat(value: '$fulfilled', label: 'Fulfilled', color: AidColors.ngoAccent),
-                _vDivider(),
-                _QuickStat(
-                  value: _ngoVerified ? 'Yes' : 'No',
-                  label: 'Verified',
-                  color: _ngoVerified ? AidColors.ngoAccent : AidColors.textMuted,
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _vDivider() => Container(
-    width: 1, height: 32, margin: const EdgeInsets.symmetric(horizontal: 12),
-    color: AidColors.borderDefault,
-  );
-
   Widget _buildTabBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+    return Container(
+      color: AidColors.background,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: Container(
-        height: 44,
+        height: 42,
         decoration: BoxDecoration(color: AidColors.surface, borderRadius: BorderRadius.circular(12)),
         child: TabBar(
           controller: _tab,
@@ -293,13 +317,52 @@ class _NgoDashboardState extends State<NgoDashboard>
           dividerColor: Colors.transparent,
           labelColor: Colors.white,
           unselectedLabelColor: AidColors.textMuted,
-          labelStyle: AidTextStyles.caption.copyWith(fontWeight: FontWeight.w700),
-          unselectedLabelStyle: AidTextStyles.caption,
-          tabs: const [Tab(text: 'Posts'), Tab(text: 'Activities'), Tab(text: 'Groups'), Tab(text: 'Impact')],
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
+          isScrollable: false,
+          tabs: const [
+            Tab(text: 'Posts'),
+            Tab(text: 'Events'),
+            Tab(text: 'Groups'),
+            Tab(text: 'Resources'),
+            Tab(text: 'Impact'),
+          ],
         ),
       ),
     );
   }
+}
+
+// ─── Hero Stat (inside gradient header) ──────────────────────────────────────
+
+class _HeroStat extends StatelessWidget {
+  final String value, label;
+  final bool highlight;
+  const _HeroStat({required this.value, required this.label, this.highlight = false});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: highlight ? const Color(0xFF80FFD0) : Colors.white,
+            fontSize: 22, fontWeight: FontWeight.w900, height: 1,
+          ),
+        ),
+        const Gap(3),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.2,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 }
 
 // ─── My Posts Tab ─────────────────────────────────────────────────────────────
@@ -1060,21 +1123,24 @@ class _ImpactGroupsTabState extends State<_ImpactGroupsTab> {
 }
 
 // ─── Activities Tab ───────────────────────────────────────────────────────────
-// For both NGOs and Welfare Homes — schedule events, camps, resident activities
 
 class _ActivitiesTab extends StatefulWidget {
   final String uid;
-  const _ActivitiesTab({required this.uid});
+  final String ngoName;
+  const _ActivitiesTab({required this.uid, required this.ngoName});
 
   @override
   State<_ActivitiesTab> createState() => _ActivitiesTabState();
 }
 
 class _ActivitiesTabState extends State<_ActivitiesTab> {
+  static const _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
   void _showAddSheet() {
-    final titleCtrl = TextEditingController();
-    final descCtrl  = TextEditingController();
-    final dateCtrl  = TextEditingController();
+    final titleCtrl    = TextEditingController();
+    final descCtrl     = TextEditingController();
+    final locationCtrl = TextEditingController();
+    final dateCtrl     = TextEditingController();
     DateTime? picked;
 
     showModalBottomSheet(
@@ -1082,39 +1148,59 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
       isScrollControlled: true,
       backgroundColor: AidColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) {
           bool saving = false;
           return Padding(
-            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 24),
+            padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(ctx).viewInsets.bottom + 32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 40, height: 4,
+                Center(child: Container(width: 40, height: 4,
+                    decoration: BoxDecoration(color: AidColors.borderStrong, borderRadius: BorderRadius.circular(2)))),
+                const Gap(18),
+
+                // Header
+                Row(children: [
+                  Container(
+                    width: 40, height: 40,
                     decoration: BoxDecoration(
-                      color: AidColors.borderDefault,
-                      borderRadius: BorderRadius.circular(2),
+                      gradient: const LinearGradient(
+                        colors: [AidColors.ngoAccent, Color(0xFF0F9E6E)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: const Icon(Icons.event_rounded, color: Colors.white, size: 20),
                   ),
-                ),
-                const Gap(16),
-                Text('Add Activity', style: AidTextStyles.headingMd),
-                const Gap(4),
-                Text('Schedule events, camps, drives, or resident activities',
-                    style: AidTextStyles.bodySm),
-                const Gap(16),
+                  const Gap(12),
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('New Activity', style: AidTextStyles.headingMd),
+                    Text('Visible to donors & volunteers', style: AidTextStyles.bodySm),
+                  ]),
+                ]),
+                const Gap(20),
+
                 TextField(
                   controller: titleCtrl,
                   autofocus: true,
                   style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
                   decoration: const InputDecoration(
-                    labelText: 'Activity name *',
-                    hintText: 'e.g. Morning Yoga, Medical Camp, Food Drive',
+                    labelText: 'Activity title *',
+                    hintText: 'e.g. Medical Camp, Food Drive, Yoga Session',
+                    prefixIcon: Icon(Icons.title_rounded, size: 18),
+                  ),
+                ),
+                const Gap(12),
+                TextField(
+                  controller: locationCtrl,
+                  style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    hintText: 'Where is it happening?',
+                    prefixIcon: Icon(Icons.location_on_outlined, size: 18),
                   ),
                 ),
                 const Gap(12),
@@ -1124,7 +1210,8 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
                   style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
                   decoration: const InputDecoration(
                     labelText: 'Details (optional)',
-                    hintText: 'Location, instructions, what to bring…',
+                    hintText: 'What to bring, volunteer instructions…',
+                    alignLabelWithHint: true,
                   ),
                 ),
                 const Gap(12),
@@ -1133,58 +1220,98 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
                   readOnly: true,
                   style: AidTextStyles.bodyMd.copyWith(color: AidColors.textPrimary),
                   decoration: const InputDecoration(
-                    labelText: 'Date',
-                    hintText: 'Tap to pick',
-                    suffixIcon: Icon(Icons.calendar_month_rounded, size: 18),
+                    labelText: 'Date *',
+                    hintText: 'Tap to pick a date',
+                    prefixIcon: Icon(Icons.calendar_month_rounded, size: 18),
                   ),
                   onTap: () async {
                     final d = await showDatePicker(
                       context: ctx,
                       initialDate: DateTime.now(),
-                      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                      firstDate: DateTime.now(),
                       lastDate: DateTime.now().add(const Duration(days: 365)),
                     );
                     if (d != null) {
                       picked = d;
-                      dateCtrl.text = '${d.day}/${d.month}/${d.year}';
+                      dateCtrl.text = '${d.day} ${_months[d.month - 1]} ${d.year}';
                       setS(() {});
                     }
                   },
                 ),
-                const Gap(20),
+                const Gap(24),
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: saving
+                    onPressed: (saving || titleCtrl.text.trim().isEmpty)
                         ? null
                         : () async {
-                            if (titleCtrl.text.trim().isEmpty) return;
                             setS(() => saving = true);
-                            await FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(widget.uid)
-                                .collection('activities')
-                                .add({
-                              'title': titleCtrl.text.trim(),
+                            final now = DateTime.now();
+                            final ts  = Timestamp.fromDate(now); // ← client timestamp, never null
+
+                            final batch = FirebaseFirestore.instance.batch();
+
+                            // 1️⃣ NGO's private calendar
+                            final actRef = FirebaseFirestore.instance
+                                .collection('users').doc(widget.uid)
+                                .collection('activities').doc();
+                            batch.set(actRef, {
+                              'title':       titleCtrl.text.trim(),
                               'description': descCtrl.text.trim(),
-                              'date': picked != null ? Timestamp.fromDate(picked!) : null,
-                              'status': 'upcoming',
-                              'createdAt': FieldValue.serverTimestamp(),
+                              'location':    locationCtrl.text.trim(),
+                              'date':        picked != null ? Timestamp.fromDate(picked!) : ts,
+                              'status':      'upcoming',
+                              'createdAt':   ts,
                             });
+
+                            // 2️⃣ Public posts collection → visible to donors & volunteers
+                            final postRef = FirebaseFirestore.instance.collection('posts').doc();
+                            batch.set(postRef, {
+                              'ngoId':       widget.uid,
+                              'ngoName':     widget.ngoName,
+                              'ngoVerified': false,
+                              'title':       titleCtrl.text.trim(),
+                              'description': descCtrl.text.trim().isEmpty
+                                  ? '${widget.ngoName} is hosting an activity. Join us!'
+                                  : descCtrl.text.trim(),
+                              'category':    'volunteer event',
+                              'type':        'activity',
+                              'status':      'active',
+                              'mediaUrls':   [],
+                              'proofUrls':   [],
+                              'requiredItems': [],
+                              'eventDetails': {
+                                'eventDate':         picked != null
+                                    ? Timestamp.fromDate(picked!)
+                                    : ts,
+                                'location':          locationCtrl.text.trim(),
+                                'volunteersNeeded':  10,
+                                'volunteersJoined':  0,
+                                'contactName':       '',
+                                'contactPhone':      '',
+                              },
+                              'urgencyScore':      0.4,
+                              'flaggedForReview':  false,
+                              'donationCount':     0,
+                              'createdAt':         ts,
+                              'updatedAt':         ts,
+                            });
+
+                            await batch.commit();
                             if (ctx.mounted) Navigator.pop(ctx);
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AidColors.ngoAccent,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       elevation: 0,
                     ),
                     child: saving
-                        ? const SizedBox(
-                            width: 20, height: 20,
+                        ? const SizedBox(width: 20, height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Save Activity', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                        : const Text('Publish Activity', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                   ),
                 ),
               ],
@@ -1195,141 +1322,194 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
     );
   }
 
+  Future<void> _deleteActivity(String docId, Map<String, dynamic> data) async {
+    // Delete from private calendar
+    await FirebaseFirestore.instance
+        .collection('users').doc(widget.uid)
+        .collection('activities').doc(docId).delete();
+
+    // Also try to delete matching public post (best effort, match by title + ngoId)
+    try {
+      final posts = await FirebaseFirestore.instance
+          .collection('posts')
+          .where('ngoId', isEqualTo: widget.uid)
+          .where('type', isEqualTo: 'activity')
+          .where('title', isEqualTo: data['title'])
+          .limit(1)
+          .get();
+      for (final p in posts.docs) {
+        await p.reference.delete();
+      }
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         StreamBuilder<QuerySnapshot>(
+          // No orderBy — sort client-side to avoid composite index requirement
           stream: FirebaseFirestore.instance
               .collection('users')
               .doc(widget.uid)
               .collection('activities')
-              .orderBy('createdAt', descending: true)
               .snapshots(),
           builder: (context, snap) {
             if (snap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent));
+              return const Center(child: CircularProgressIndicator(
+                  color: AidColors.ngoAccent, strokeWidth: 2));
             }
-            final docs = snap.data?.docs ?? [];
+
+            final rawDocs = snap.data?.docs ?? [];
+            // Sort by date ascending (upcoming first), then by createdAt
+            final docs = [...rawDocs]..sort((a, b) {
+                final aDate = (a.data() as Map)['date'] as Timestamp?;
+                final bDate = (b.data() as Map)['date'] as Timestamp?;
+                if (aDate == null && bDate == null) return 0;
+                if (aDate == null) return 1;
+                if (bDate == null) return -1;
+                return aDate.compareTo(bDate);
+              });
+
             if (docs.isEmpty) {
               return const _EmptyState(
                 icon: Icons.event_note_outlined,
-                title: 'No activities scheduled',
-                sub: 'Tap Add Activity to schedule a drive, camp, event or resident activity.',
+                title: 'No activities yet',
+                sub: 'Tap Publish Activity to schedule an event visible to donors and volunteers.',
               );
             }
+
             return ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 100),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               itemCount: docs.length,
               separatorBuilder: (_, __) => const Gap(10),
               itemBuilder: (_, i) {
                 final data = docs[i].data() as Map<String, dynamic>;
-                final date = data['date'] != null
-                    ? (data['date'] as Timestamp).toDate()
-                    : null;
+                final date = (data['date'] as Timestamp?)?.toDate();
                 final isPast = date != null && date.isBefore(DateTime.now());
+                final accent = isPast ? AidColors.textMuted : AidColors.ngoAccent;
 
                 return Container(
-                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AidColors.surface,
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isPast
-                          ? AidColors.borderDefault
+                          ? AidColors.borderSubtle
                           : AidColors.ngoAccent.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
                     children: [
-                      // Date badge
+                      // Accent left bar
                       Container(
-                        width: 50,
+                        width: 4,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: accent,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(16),
+                            bottomLeft: Radius.circular(16),
+                          ),
+                        ),
+                      ),
+                      const Gap(14),
+
+                      // Date block
+                      Container(
+                        width: 46,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         decoration: BoxDecoration(
-                          color: isPast
-                              ? AidColors.elevated
-                              : AidColors.ngoAccent.withValues(alpha: 0.12),
+                          color: accent.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              date != null
-                                  ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][date.month - 1]
-                                  : '—',
-                              style: TextStyle(
-                                color: isPast ? AidColors.textMuted : AidColors.ngoAccent,
-                                fontSize: 10, fontWeight: FontWeight.w600,
-                              ),
+                              date != null ? _months[date.month - 1].toUpperCase() : '—',
+                              style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w800),
                             ),
                             Text(
                               date != null ? '${date.day}' : '?',
-                              style: TextStyle(
-                                color: isPast ? AidColors.textMuted : AidColors.ngoAccent,
-                                fontSize: 20, fontWeight: FontWeight.w800, height: 1.1,
-                              ),
+                              style: TextStyle(color: accent, fontSize: 22, fontWeight: FontWeight.w900, height: 1),
+                            ),
+                            Text(
+                              date != null ? '${date.year}' : '',
+                              style: TextStyle(color: accent.withValues(alpha: 0.7), fontSize: 9, fontWeight: FontWeight.w500),
                             ),
                           ],
                         ),
                       ),
                       const Gap(12),
+
+                      // Title + description + location
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(data['title'] ?? '', style: AidTextStyles.headingSm),
-                            if ((data['description'] ?? '').isNotEmpty) ...[
-                              const Gap(2),
-                              Text(
-                                data['description'],
-                                style: AidTextStyles.bodySm,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(data['title'] ?? '', style: AidTextStyles.headingSm),
+                              if ((data['location'] ?? '').toString().isNotEmpty) ...[
+                                const Gap(3),
+                                Row(children: [
+                                  Icon(Icons.location_on_outlined, size: 11, color: AidColors.textMuted),
+                                  const Gap(3),
+                                  Expanded(
+                                    child: Text(
+                                      data['location'],
+                                      style: AidTextStyles.labelMd.copyWith(color: AidColors.textMuted),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ]),
+                              ],
+                              if ((data['description'] ?? '').toString().isNotEmpty) ...[
+                                const Gap(3),
+                                Text(
+                                  data['description'],
+                                  style: AidTextStyles.bodySm,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                       const Gap(8),
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: (isPast ? AidColors.textMuted : AidColors.ngoAccent)
-                                  .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              isPast ? 'DONE' : 'UPCOMING',
-                              style: AidTextStyles.labelSm.copyWith(
-                                color: isPast ? AidColors.textMuted : AidColors.ngoAccent,
-                                fontWeight: FontWeight.w800, fontSize: 8,
-                              ),
-                            ),
-                          ),
-                          const Gap(6),
-                          GestureDetector(
-                            onTap: () async {
-                              await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(widget.uid)
-                                  .collection('activities')
-                                  .doc(docs[i].id)
-                                  .delete();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
+
+                      // Status pill + delete
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AidColors.error.withValues(alpha: 0.08),
-                                shape: BoxShape.circle,
+                                color: accent.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Icon(Icons.delete_outline_rounded,
-                                  size: 14, color: AidColors.error),
+                              child: Text(
+                                isPast ? 'DONE' : 'UPCOMING',
+                                style: TextStyle(color: accent, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                              ),
                             ),
-                          ),
-                        ],
+                            const Gap(8),
+                            GestureDetector(
+                              onTap: () => _deleteActivity(docs[i].id, data),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: AidColors.error.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.delete_outline_rounded, size: 14, color: AidColors.error),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1338,22 +1518,340 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
             );
           },
         ),
+
         Positioned(
-          bottom: 16,
-          right: 16,
+          bottom: 16, right: 16,
           child: FloatingActionButton.extended(
             heroTag: 'addActivity',
             onPressed: _showAddSheet,
             backgroundColor: AidColors.ngoAccent,
             foregroundColor: Colors.white,
-            icon: const Icon(Icons.event_rounded, size: 18),
-            label: const Text('Add Activity',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('Publish Activity', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
           ),
         ),
       ],
     );
   }
+}
+
+// ─── Resources Tab ───────────────────────────────────────────────────────────
+
+class _ResourcesTab extends StatefulWidget {
+  const _ResourcesTab();
+
+  @override
+  State<_ResourcesTab> createState() => _ResourcesTabState();
+}
+
+class _ResourcesTabState extends State<_ResourcesTab> {
+  int _expandedIndex = -1;
+
+  static const _categories = <_ResCategory>[
+    _ResCategory(
+      icon: Icons.local_hospital_rounded,
+      title: 'Government Hospitals',
+      subtitle: 'Free & subsidized treatment centers',
+      color: Color(0xFFE91E63),
+      items: [
+        _ResItem('AIIMS', 'All India Institute of Medical Sciences — free treatment for all citizens',
+            '011-26588500', 'Delhi & multiple cities'),
+        _ResItem('NIMHANS', 'National Institute of Mental Health & Neurosciences — psychiatric care',
+            '080-46110007', 'Bangalore'),
+        _ResItem('Ram Manohar Lohia Hospital', 'Government hospital — free OPD & emergency services',
+            '011-23365525', 'New Delhi'),
+        _ResItem('ESI Hospitals', 'Employee State Insurance — free treatment for ESI members',
+            '1800-11-3839', 'Pan India (300+ hospitals)'),
+      ],
+    ),
+    _ResCategory(
+      icon: Icons.water_drop_rounded,
+      title: 'Blood Banks',
+      subtitle: 'Voluntary donation & emergency requests',
+      color: Color(0xFFE8514A),
+      items: [
+        _ResItem('Indian Red Cross Society', 'Largest blood bank network — emergency blood requests',
+            '1800-180-7999', 'Pan India (Toll Free)'),
+        _ResItem('eBloodServices', 'Online blood request platform — connects 2,000+ banks nationwide',
+            null, 'ebloodservices.org'),
+        _ResItem('Sankalp India Foundation', 'Blood donation drives, thalassemia & patient support',
+            '080-23568451', 'Bangalore & expanding'),
+        _ResItem('National Blood Transfusion Council', 'Government blood coordination & emergency helpline',
+            '011-23062300', 'New Delhi'),
+      ],
+    ),
+    _ResCategory(
+      icon: Icons.medical_services_rounded,
+      title: 'Free Medicine Sources',
+      subtitle: 'Subsidized & free medicine programs',
+      color: Color(0xFF4CAF50),
+      items: [
+        _ResItem('Jan Aushadhi Kendras', 'PM Bhartiya Janaushadhi Pariyojana — medicines 50–90% cheaper',
+            '1800-111-255', '9,000+ outlets across India'),
+        _ResItem('Ayushman Bharat (PMJAY)', 'Free treatment up to ₹5 lakh per family per year at 25,000+ hospitals',
+            '14555', 'pmjay.gov.in | Toll Free'),
+        _ResItem('State Free Medicine Scheme', 'Free medicines at government PHCs, CHCs & district hospitals',
+            null, 'Contact district CMO office'),
+        _ResItem('NGO Medicine Banks', 'Organizations like iCall, Goonj distribute free medicines',
+            '9152987821', 'Pan India'),
+      ],
+    ),
+    _ResCategory(
+      icon: Icons.airport_shuttle_rounded,
+      title: 'Ambulance Services',
+      subtitle: 'Emergency & patient transport',
+      color: Color(0xFF2196F3),
+      items: [
+        _ResItem('108 — Emergency Ambulance', 'Free government advanced life support — 24/7 response',
+            '108', 'Pan India (All states)'),
+        _ResItem('102 — Janani Express', 'Free ambulance for pregnant women & newborn transport',
+            '102', 'Pan India (Govt-funded)'),
+        _ResItem('EMRI 1298 Ambulance', 'Emergency response — basic & advanced life support units',
+            '1298', 'Andhra, Telangana, Gujarat, others'),
+        _ResItem('Ziqitza Healthcare', 'Private ambulance — ICU on wheels & inter-hospital transfers',
+            '1800-419-1122', 'Pan India'),
+      ],
+    ),
+    _ResCategory(
+      icon: Icons.home_rounded,
+      title: 'Shelters & Welfare Homes',
+      subtitle: 'Old age homes, orphanages & women shelters',
+      color: Color(0xFF7C3AED),
+      items: [
+        _ResItem('HelpAge India', 'Old age homes, elder helpline, legal aid & mobile health for seniors',
+            '1800-180-1253', 'Pan India (Toll Free)'),
+        _ResItem('Missionaries of Charity', 'Shelter homes for destitute, terminally ill & abandoned',
+            '033-22271167', 'Kolkata & 250+ centres in India'),
+        _ResItem('SOS Children\'s Villages India', 'Safe homes & holistic care for orphaned & abandoned children',
+            '011-46556300', '32 villages across India'),
+        _ResItem('SWADHAR Greh (Govt)', 'Government shelter homes for women in distress — free food & legal aid',
+            '181', 'Women helpline — Pan India'),
+      ],
+    ),
+    _ResCategory(
+      icon: Icons.account_balance_rounded,
+      title: 'Government Welfare Schemes',
+      subtitle: 'Central & state support programs',
+      color: Color(0xFFFF9800),
+      items: [
+        _ResItem('PM KISAN Samman Nidhi', 'Direct ₹6,000/year income support for small & marginal farmers',
+            '155261', 'pmkisan.gov.in'),
+        _ResItem('PM Ujjwala Yojana', 'Free LPG connections for BPL households — clean cooking fuel',
+            '1800-233-3555', 'pmuy.gov.in'),
+        _ResItem('MGNREGA', '100-day guaranteed rural employment — ₹220–300/day wages',
+            null, 'nrega.nic.in | Block office'),
+        _ResItem('National Social Assistance Programme', 'Old age, widow & disability pension for BPL families',
+            null, 'nsap.nic.in | District SDO'),
+        _ResItem('PM Awas Yojana', 'Affordable housing for economically weaker sections',
+            '1800-11-6163', 'pmaymis.gov.in'),
+      ],
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: _categories.length + 1,
+      separatorBuilder: (_, __) => const Gap(10),
+      itemBuilder: (_, i) {
+        if (i == 0) return _buildBanner();
+        final cat = _categories[i - 1];
+        final expanded = _expandedIndex == (i - 1);
+        return _buildCard(cat, i - 1, expanded);
+      },
+    );
+  }
+
+  Widget _buildBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AidColors.ngoAccent.withValues(alpha: 0.15), AidColors.donorAccent.withValues(alpha: 0.06)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AidColors.ngoAccent.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AidColors.ngoAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.library_books_rounded, color: AidColors.ngoAccent, size: 22),
+          ),
+          const Gap(14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Welfare Resource Directory', style: AidTextStyles.headingMd),
+                const Gap(2),
+                Text('Hospitals · Blood banks · Govt schemes · Shelters',
+                    style: AidTextStyles.bodySm),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(_ResCategory cat, int index, bool expanded) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: AidColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: expanded ? cat.color.withValues(alpha: 0.45) : AidColors.borderSubtle,
+          width: expanded ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _expandedIndex = expanded ? -1 : index),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(
+                      color: cat.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                    child: Icon(cat.icon, color: cat.color, size: 22),
+                  ),
+                  const Gap(12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(cat.title, style: AidTextStyles.headingSm),
+                        const Gap(1),
+                        Text(cat.subtitle, style: AidTextStyles.bodySm),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: cat.color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${cat.items.length}',
+                      style: TextStyle(color: cat.color, fontSize: 12, fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  const Gap(8),
+                  Icon(
+                    expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    color: AidColors.textMuted, size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expanded) ...[
+            const Divider(color: AidColors.borderSubtle, height: 1, indent: 14, endIndent: 14),
+            ...cat.items.asMap().entries.map((e) =>
+              _buildItem(e.value, cat.color, e.key == cat.items.length - 1),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItem(_ResItem item, Color color, bool isLast) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, isLast ? 14 : 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 6, height: 6,
+                margin: const EdgeInsets.only(top: 6),
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const Gap(10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.name, style: AidTextStyles.headingSm),
+                    const Gap(3),
+                    Text(item.description, style: AidTextStyles.bodySm),
+                    const Gap(6),
+                    Wrap(
+                      spacing: 12, runSpacing: 4,
+                      children: [
+                        if (item.phone != null)
+                          _resChip(Icons.phone_rounded, item.phone!, color),
+                        _resChip(Icons.location_on_outlined, item.location, AidColors.textMuted),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (!isLast) ...[
+            const Gap(12),
+            const Divider(color: AidColors.borderSubtle, height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _resChip(IconData icon, String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 11, color: color),
+        const Gap(4),
+        Text(
+          label,
+          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Resource data classes ────────────────────────────────────────────────────
+
+class _ResCategory {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final List<_ResItem> items;
+  const _ResCategory({
+    required this.icon, required this.title, required this.subtitle,
+    required this.color, required this.items,
+  });
+}
+
+class _ResItem {
+  final String name;
+  final String description;
+  final String? phone;
+  final String location;
+  const _ResItem(this.name, this.description, this.phone, this.location);
 }
 
 // ─── Impact Tab ───────────────────────────────────────────────────────────────

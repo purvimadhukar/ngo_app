@@ -98,6 +98,10 @@ class NgoPost {
   final DateTime createdAt;
   final DateTime? updatedAt;
 
+  // Fundraising goal
+  final double targetAmount;      // monetary goal in ₹ (0 = no target set)
+  final double raisedAmount;      // total ₹ raised so far
+
   // ML fields
   final double urgencyScore;      // 0.0 – 1.0, set by ML or manually
   final bool flaggedForReview;    // fraud detection flag
@@ -118,6 +122,8 @@ class NgoPost {
     this.eventDetails,
     required this.createdAt,
     this.updatedAt,
+    this.targetAmount = 0,
+    this.raisedAmount = 0,
     this.urgencyScore = 0.5,
     this.flaggedForReview = false,
   });
@@ -152,6 +158,8 @@ class NgoPost {
       updatedAt: m['updatedAt'] != null
           ? (m['updatedAt'] as Timestamp).toDate()
           : null,
+      targetAmount: (m['targetAmount'] ?? 0).toDouble(),
+      raisedAmount: (m['raisedAmount'] ?? 0).toDouble(),
       urgencyScore: (m['urgencyScore'] ?? 0.5).toDouble(),
       flaggedForReview: m['flaggedForReview'] ?? false,
     );
@@ -172,8 +180,11 @@ class NgoPost {
         if (eventDetails != null) 'eventDetails': eventDetails!.toMap(),
         'createdAt': Timestamp.fromDate(createdAt),
         'updatedAt': FieldValue.serverTimestamp(),
+        'targetAmount': targetAmount,
+        'raisedAmount': raisedAmount,
         'urgencyScore': urgencyScore,
         'flaggedForReview': flaggedForReview,
+        'donationCount': 0,
       };
 
   NgoPost copyWith({

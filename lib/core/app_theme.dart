@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // ─────────────────────────────────────────────
 //  AidBridge Design Tokens
@@ -97,24 +98,23 @@ class AidColors {
 class AidTextStyles {
   AidTextStyles._();
 
-  static const _base = TextStyle(
-    fontFamily: 'SF Pro Display',
+  static TextStyle get _base => GoogleFonts.inter(
     color: AidColors.textPrimary,
     letterSpacing: -0.2,
   );
 
-  static final displayLg = _base.copyWith(fontSize: 32, fontWeight: FontWeight.w700, letterSpacing: -0.8, height: 1.15);
-  static final displaySm = _base.copyWith(fontSize: 26, fontWeight: FontWeight.w700, letterSpacing: -0.6, height: 1.2);
-  static final headingLg = _base.copyWith(fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: -0.4, height: 1.3);
-  static final headingMd = _base.copyWith(fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.3, height: 1.35);
-  static final headingSm = _base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2, height: 1.4);
-  static final bodyLg    = _base.copyWith(fontSize: 16, fontWeight: FontWeight.w400, letterSpacing: -0.1, height: 1.55);
-  static final bodyMd    = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.1, height: 1.55);
-  static final bodySm    = _base.copyWith(fontSize: 13, fontWeight: FontWeight.w400, height: 1.5,  color: AidColors.textSecondary);
-  static final labelLg   = _base.copyWith(fontSize: 14, fontWeight: FontWeight.w500, letterSpacing: 0.1);
-  static final labelMd   = _base.copyWith(fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 0.2);
-  static final labelSm   = _base.copyWith(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.4, color: AidColors.textTertiary);
-  static final mono      = _base.copyWith(fontFamily: 'SF Mono', fontSize: 13, letterSpacing: 0.0);
+  static TextStyle get displayLg => _base.copyWith(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1.0, height: 1.1);
+  static TextStyle get displaySm => _base.copyWith(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.8, height: 1.15);
+  static TextStyle get headingLg => _base.copyWith(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.25);
+  static TextStyle get headingMd => _base.copyWith(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.3, height: 1.3);
+  static TextStyle get headingSm => _base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2, height: 1.35);
+  static TextStyle get bodyLg    => _base.copyWith(fontSize: 16, fontWeight: FontWeight.w400, letterSpacing: -0.1, height: 1.6);
+  static TextStyle get bodyMd    => _base.copyWith(fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.1, height: 1.6);
+  static TextStyle get bodySm    => _base.copyWith(fontSize: 13, fontWeight: FontWeight.w400, height: 1.55, color: AidColors.textSecondary);
+  static TextStyle get labelLg   => _base.copyWith(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1);
+  static TextStyle get labelMd   => _base.copyWith(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.1);
+  static TextStyle get labelSm   => _base.copyWith(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.3, color: AidColors.textTertiary);
+  static TextStyle get mono      => GoogleFonts.robotoMono(fontSize: 13, color: AidColors.textPrimary);
 
   // Aliases used across existing screens
   static final heading = headingLg;
@@ -181,7 +181,6 @@ class AidTheme {
       colorScheme:             cs,
       scaffoldBackgroundColor: AidColors.background,
       splashFactory:           NoSplash.splashFactory,
-
       appBarTheme: AppBarTheme(
         backgroundColor:       AidColors.background,
         foregroundColor:       AidColors.textPrimary,

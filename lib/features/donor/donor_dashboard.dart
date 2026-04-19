@@ -19,6 +19,8 @@ import 'donor_groups_screen.dart';
 import 'featured_cause_screen.dart';
 import 'impact_group_screen.dart';
 import '../../models/impact_group.dart';
+import '../common/welfare_resources_screen.dart';
+import '../common/contact_us_screen.dart';
 
 class DonorDashboard extends StatefulWidget {
   const DonorDashboard({super.key});
@@ -247,6 +249,24 @@ class _DonorMoreTab extends StatelessWidget {
               ),
               const Gap(10),
               _Tile(
+                icon: Icons.library_books_rounded,
+                title: 'Welfare Resources',
+                subtitle: 'Hospitals, blood banks, govt schemes & more',
+                color: AidColors.ngoAccent,
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const WelfareResourcesScreen())),
+              ),
+              const Gap(10),
+              _Tile(
+                icon: Icons.contact_support_outlined,
+                title: 'Contact Us',
+                subtitle: 'Get in touch, onboard your NGO',
+                color: const Color(0xFF4F46E5),
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const ContactUsScreen())),
+              ),
+              const Gap(10),
+              _Tile(
                 icon: Icons.logout_rounded,
                 title: 'Sign Out',
                 subtitle: '',
@@ -358,102 +378,145 @@ class _FeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ── IMPORTANT: Only orderBy('createdAt') — no compound where+orderBy
-    // because that requires a Firestore composite index.
-    // Status + category filtering is done CLIENT-SIDE below.
+    // Single scrollable view — everything in one CustomScrollView so posts
+    // always render regardless of how many header cards there are.
     final stream = FirebaseFirestore.instance
         .collection('posts')
         .orderBy('createdAt', descending: true)
         .snapshots();
 
-    return Column(
-      children: [
-        // ── Platform Impact Stats ─────────────────────────────────────
-        const _ImpactStatsCard(),
-        // ── Services Grid ─────────────────────────────────────────────
-        _ServicesGrid(onCategoryTap: onFilterChanged),
-        // ── Manasa Medical Trust — Featured Partner ───────────────────
-        const _ManasaFeaturedCard(),
-        // ── See → Feel → Act Impact Groups ────────────────────────────
-        const _ImpactGroupsRow(),
-        // Category chips
-        SizedBox(
-          height: 52,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-            itemCount: categories.length,
-            separatorBuilder: (_, __) => const Gap(8),
-            itemBuilder: (_, i) {
-              final c = categories[i];
-              final selected = filterCategory == c;
-              return GestureDetector(
-                onTap: () => onFilterChanged(c),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: selected ? AidColors.donorAccent : AidColors.surface,
-                    borderRadius: BorderRadius.circular(99),
-                    border: Border.all(color: selected ? AidColors.donorAccent : AidColors.borderDefault),
-                  ),
-                  child: Text(
-                    c[0].toUpperCase() + c.substring(1),
-                    style: AidTextStyles.labelMd.copyWith(
-                      color: selected ? Colors.white : AidColors.textMuted,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+    return StreamBuilder<QuerySnapshot>(
+      stream: stream,
+      builder: (context, snap) {
+        // ── Client-side filter: active status + optional category ──
+        final allDocs = snap.data?.docs ?? [];
+        final docs = allDocs.where((d) {
+          final data = d.data() as Map<String, dynamic>;
+          if ((data['status'] as String?) != 'active') return false;
+          if (filterCategory != 'All' &&
+              (data['category'] as String?) != filterCategory) return false;
+          return true;
+        }).toList();
 
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: stream,
-            builder: (context, snap) {
-              if (snap.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator(color: AidColors.donorAccent));
-              }
-              if (snap.hasError) {
-                return _EmptyState(
+        return CustomScrollView(
+          slivers: [
+            // ── Platform Impact Stats ────────────────────────────────
+            const SliverToBoxAdapter(child: _ImpactStatsCard()),
+            // ── Services Grid ────────────────────────────────────────
+            SliverToBoxAdapter(child: _ServicesGrid(onCategoryTap: onFilterChanged)),
+            // ── Manasa Medical Trust — Featured Partner ──────────────
+            const SliverToBoxAdapter(child: _ManasaFeaturedCard()),
+            // ── Welfare Resource Directory ───────────────────────────
+            const SliverToBoxAdapter(child: WelfareResourcesPreview()),
+            // ── See → Feel → Act Impact Groups ──────────────────────
+            const SliverToBoxAdapter(child: _ImpactGroupsRow()),
+
+            // ── Category filter chips (sticky) ───────────────────────
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _StickyChipsDelegate(
+                categories: categories,
+                selected: filterCategory,
+                onTap: onFilterChanged,
+              ),
+            ),
+
+            // ── Posts ────────────────────────────────────────────────
+            if (snap.connectionState == ConnectionState.waiting && docs.isEmpty)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator(color: AidColors.donorAccent)),
+              )
+            else if (snap.hasError)
+              SliverFillRemaining(
+                child: _EmptyState(
                   icon: Icons.error_outline_rounded,
                   message: 'Could not load posts',
-                  sub: 'Check your internet connection and try again.',
-                );
-              }
-
-              // ── Client-side filter: active status + optional category ──
-              final allDocs = snap.data?.docs ?? [];
-              final docs = allDocs.where((d) {
-                final data = d.data() as Map<String, dynamic>;
-                if ((data['status'] as String?) != 'active') return false;
-                if (filterCategory != 'All' &&
-                    (data['category'] as String?) != filterCategory) return false;
-                return true;
-              }).toList();
-
-              if (docs.isEmpty) {
-                return _EmptyState(
+                  sub: snap.error.toString(),
+                ),
+              )
+            else if (docs.isEmpty)
+              SliverFillRemaining(
+                child: _EmptyState(
                   icon: Icons.volunteer_activism_outlined,
-                  message: 'No posts right now',
+                  message: 'No posts yet',
                   sub: filterCategory == 'All'
                       ? 'NGOs haven\'t posted yet — check back soon!'
-                      : 'No $filterCategory posts right now. Try another category.',
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                itemCount: docs.length,
-                separatorBuilder: (_, __) => const Gap(14),
-                itemBuilder: (_, i) => _DonorPostCard(post: NgoPost.fromFirestore(docs[i])),
-              );
-            },
-          ),
-        ),
-      ],
+                      : 'No $filterCategory posts right now.',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: _DonorPostCard(post: NgoPost.fromFirestore(docs[i])),
+                    ),
+                    childCount: docs.length,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─── Sticky category chips delegate ──────────────────────────────────────────
+
+class _StickyChipsDelegate extends SliverPersistentHeaderDelegate {
+  final List<String> categories;
+  final String selected;
+  final void Function(String) onTap;
+
+  const _StickyChipsDelegate({
+    required this.categories,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override double get minExtent => 52;
+  @override double get maxExtent => 52;
+
+  @override
+  bool shouldRebuild(_StickyChipsDelegate old) =>
+      old.selected != selected || old.categories != categories;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Container(
+      color: AidColors.background,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const Gap(8),
+        itemBuilder: (_, i) {
+          final c = categories[i];
+          final isSelected = selected == c;
+          return GestureDetector(
+            onTap: () => onTap(c),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? AidColors.donorAccent : AidColors.surface,
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: isSelected ? AidColors.donorAccent : AidColors.borderDefault),
+              ),
+              child: Text(
+                c[0].toUpperCase() + c.substring(1),
+                style: AidTextStyles.labelMd.copyWith(
+                  color: isSelected ? Colors.white : AidColors.textMuted,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -561,9 +624,12 @@ class _DonorPostCard extends StatelessWidget {
                     style: AidTextStyles.bodyMd.copyWith(color: AidColors.textSecondary),
                   ),
 
+                  // Raised progress circle
+                  const Gap(12),
+                  _RaisedProgress(post: post),
+
                   // Item progress bars
                   if (post.requiredItems.isNotEmpty) ...[
-                    const Gap(12),
                     ...post.requiredItems.take(2).map((item) => Padding(
                           padding: const EdgeInsets.only(bottom: 7),
                           child: Column(
@@ -1218,6 +1284,164 @@ class _ServicesGrid extends StatelessWidget {
         const Gap(6),
       ],
     );
+  }
+}
+
+// ─── Circular Raised Progress ────────────────────────────────────────────────
+
+class _CirclePainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  const _CirclePainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r  = size.width / 2 - 3;
+
+    // Track
+    canvas.drawCircle(
+      Offset(cx, cy), r,
+      Paint()
+        ..color = color.withValues(alpha: 0.12)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4,
+    );
+
+    // Arc
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy), radius: r),
+      -1.5707963, // -π/2 (start at top)
+      progress * 6.2831853, // full circle = 2π
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CirclePainter old) => old.progress != progress;
+}
+
+class _RaisedProgress extends StatelessWidget {
+  final NgoPost post;
+  const _RaisedProgress({required this.post});
+
+  @override
+  Widget build(BuildContext context) {
+    // Activity → volunteer count
+    if (post.type == PostType.activity && post.eventDetails != null) {
+      final ed = post.eventDetails!;
+      final pct = ed.volunteersNeeded > 0
+          ? (ed.volunteersJoined / ed.volunteersNeeded).clamp(0.0, 1.0)
+          : 0.0;
+      return _buildRow(
+        pct: pct,
+        mainLabel: '${ed.volunteersJoined} / ${ed.volunteersNeeded} volunteers',
+        subLabel: 'joined',
+        color: AidColors.volunteerAccent,
+      );
+    }
+
+    // Monetary target → show raised %
+    if (post.targetAmount > 0) {
+      final pct = (post.raisedAmount / post.targetAmount).clamp(0.0, 1.0);
+      return _buildRow(
+        pct: pct,
+        mainLabel: '₹${_fmt(post.raisedAmount)} raised',
+        subLabel: 'of ₹${_fmt(post.targetAmount)} goal',
+        color: AidColors.donorAccent,
+      );
+    }
+
+    // Item-based drives → aggregate across all items
+    if (post.requiredItems.isNotEmpty) {
+      double fulfilled = post.requiredItems.fold(0, (s, i) => s + i.fulfilledQty);
+      double target    = post.requiredItems.fold(0, (s, i) => s + i.targetQty);
+      final pct = target > 0 ? (fulfilled / target).clamp(0.0, 1.0) : 0.0;
+      return _buildRow(
+        pct: pct,
+        mainLabel: '${fulfilled.toInt()} / ${target.toInt()} items',
+        subLabel: 'collected',
+        color: AidColors.ngoAccent,
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildRow({
+    required double pct,
+    required String mainLabel,
+    required String subLabel,
+    required Color color,
+  }) {
+    final pctInt = (pct * 100).toInt();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          // Circle progress
+          SizedBox(
+            width: 48, height: 48,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(48, 48),
+                  painter: _CirclePainter(progress: pct, color: color),
+                ),
+                Text(
+                  '$pctInt%',
+                  style: TextStyle(
+                    color: color, fontSize: 11,
+                    fontWeight: FontWeight.w800, height: 1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Gap(12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(mainLabel, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+              Text(subLabel, style: const TextStyle(color: AidColors.textMuted, fontSize: 11)),
+            ],
+          ),
+          const Spacer(),
+          if (pct >= 1.0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AidColors.success.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(99),
+              ),
+              child: Text(
+                'GOAL MET',
+                style: TextStyle(color: AidColors.success, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(double v) {
+    if (v >= 10000000) return '${(v / 10000000).toStringAsFixed(1)}Cr';
+    if (v >= 100000)   return '${(v / 100000).toStringAsFixed(1)}L';
+    if (v >= 1000)     return '${(v / 1000).toStringAsFixed(1)}K';
+    return v.toStringAsFixed(0);
   }
 }
 

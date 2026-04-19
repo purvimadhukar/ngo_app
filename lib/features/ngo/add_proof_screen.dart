@@ -51,9 +51,19 @@ class _AddProofScreenState extends State<AddProofScreen> {
         final bytes = await file.readAsBytes();
         final name = '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
         final ref = storage.ref('posts/$postId/proof/$name');
-        await ref.putData(bytes);
-        proofUrls.add(await ref.getDownloadURL());
+        try {
+          await ref.putData(bytes).timeout(const Duration(seconds: 30));
+          proofUrls.add(await ref.getDownloadURL());
+        } catch (_) {
+          // Skip failed uploads — still save the caption / other photos
+        }
         if (mounted) setState(() => _progress = (i + 1) / _selected.length);
+      }
+
+      if (proofUrls.isEmpty) {
+        if (mounted) _snack('Upload failed — check Firebase Storage rules or CORS config');
+        setState(() => _uploading = false);
+        return;
       }
 
       await db.collection('posts').doc(postId).update({
