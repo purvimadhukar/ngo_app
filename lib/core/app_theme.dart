@@ -98,25 +98,45 @@ class AidColors {
 class AidTextStyles {
   AidTextStyles._();
 
-  static TextStyle get _base => GoogleFonts.dmSans(
+  // ── Base fonts ────────────────────────────────────────────────────────────
+  // Space Grotesk  → all body, labels, UI text
+  // Syne           → headings & section titles (bold, editorial)
+  // Bricolage Grotesque → hero display moments (splash, dashboard titles)
+
+  static TextStyle get _body => GoogleFonts.spaceGrotesk(
     color: AidColors.textPrimary,
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   );
 
-  static TextStyle get displayLg => _base.copyWith(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1.0, height: 1.1);
-  static TextStyle get displaySm => _base.copyWith(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.8, height: 1.15);
-  static TextStyle get headingLg => _base.copyWith(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.25);
-  static TextStyle get headingMd => _base.copyWith(fontSize: 17, fontWeight: FontWeight.w700, letterSpacing: -0.3, height: 1.3);
-  static TextStyle get headingSm => _base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: -0.2, height: 1.35);
-  static TextStyle get bodyLg    => _base.copyWith(fontSize: 16, fontWeight: FontWeight.w400, letterSpacing: -0.1, height: 1.6);
-  static TextStyle get bodyMd    => _base.copyWith(fontSize: 14, fontWeight: FontWeight.w400, letterSpacing: -0.1, height: 1.6);
-  static TextStyle get bodySm    => _base.copyWith(fontSize: 13, fontWeight: FontWeight.w400, height: 1.55, color: AidColors.textSecondary);
-  static TextStyle get labelLg   => _base.copyWith(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1);
-  static TextStyle get labelMd   => _base.copyWith(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.1);
-  static TextStyle get labelSm   => _base.copyWith(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.3, color: AidColors.textTertiary);
-  static TextStyle get mono      => GoogleFonts.robotoMono(fontSize: 13, color: AidColors.textPrimary);
+  static TextStyle get _heading => GoogleFonts.syne(
+    color: AidColors.textPrimary,
+    letterSpacing: -0.4,
+  );
 
-  // Aliases used across existing screens
+  static TextStyle get _display => GoogleFonts.bricolageGrotesque(
+    color: AidColors.textPrimary,
+    letterSpacing: -1.0,
+  );
+
+  // ── Display — Bricolage Grotesque (splash screens, hero banners) ──────────
+  static TextStyle get displayLg => _display.copyWith(fontSize: 38, fontWeight: FontWeight.w800, letterSpacing: -1.5, height: 1.05);
+  static TextStyle get displaySm => _display.copyWith(fontSize: 28, fontWeight: FontWeight.w800, letterSpacing: -1.0, height: 1.1);
+
+  // ── Headings — Syne (section titles, card titles, screen names) ───────────
+  static TextStyle get headingLg => _heading.copyWith(fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.6, height: 1.2);
+  static TextStyle get headingMd => _heading.copyWith(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.4, height: 1.25);
+  static TextStyle get headingSm => _heading.copyWith(fontSize: 15, fontWeight: FontWeight.w700, letterSpacing: -0.2, height: 1.3);
+
+  // ── Body — Space Grotesk (all UI text, descriptions, labels) ─────────────
+  static TextStyle get bodyLg  => _body.copyWith(fontSize: 16, fontWeight: FontWeight.w400, height: 1.6);
+  static TextStyle get bodyMd  => _body.copyWith(fontSize: 14, fontWeight: FontWeight.w400, height: 1.6);
+  static TextStyle get bodySm  => _body.copyWith(fontSize: 13, fontWeight: FontWeight.w400, height: 1.55, color: AidColors.textSecondary);
+  static TextStyle get labelLg => _body.copyWith(fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: 0.1);
+  static TextStyle get labelMd => _body.copyWith(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.1);
+  static TextStyle get labelSm => _body.copyWith(fontSize: 11, fontWeight: FontWeight.w500, letterSpacing: 0.3, color: AidColors.textTertiary);
+  static TextStyle get mono    => GoogleFonts.robotoMono(fontSize: 13, color: AidColors.textPrimary);
+
+  // Aliases
   static final heading = headingLg;
   static final body    = bodyMd;
   static final caption = labelMd;
@@ -153,6 +173,26 @@ extension AidRoleTheme on AidRole {
     AidRole.volunteer => 'Volunteer',
   };
 }
+
+// ─────────────────────────────────────────────
+//  Smooth slide+fade page transition helper
+// ─────────────────────────────────────────────
+
+Route<T> aidRoute<T>(Widget page) => PageRouteBuilder<T>(
+  pageBuilder: (_, __, ___) => page,
+  transitionDuration: const Duration(milliseconds: 360),
+  reverseTransitionDuration: const Duration(milliseconds: 280),
+  transitionsBuilder: (_, anim, secondAnim, child) {
+    final slide = Tween(begin: const Offset(0.05, 0.0), end: Offset.zero)
+        .chain(CurveTween(curve: Curves.easeOutCubic))
+        .animate(anim);
+    final fade = CurvedAnimation(parent: anim, curve: Curves.easeOut);
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: slide, child: child),
+    );
+  },
+);
 
 // ─────────────────────────────────────────────
 //  Main ThemeData Builder

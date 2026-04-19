@@ -147,7 +147,7 @@ class _FeedPageState extends State<_FeedPage>
                       color: AidColors.textMuted, size: 22),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const SearchScreen()),
+                    aidRoute(const SearchScreen()),
                   ),
                 ),
               ],
@@ -216,7 +216,7 @@ class _DonorMoreTab extends StatelessWidget {
                 subtitle: 'Find NGOs, posts and events',
                 color: AidColors.ngoAccent,
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SearchScreen())),
+                    aidRoute(const SearchScreen())),
               ),
               const Gap(10),
               _Tile(
@@ -225,8 +225,7 @@ class _DonorMoreTab extends StatelessWidget {
                 subtitle: 'View your alerts',
                 color: AidColors.warning,
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen())),
+                    aidRoute(const NotificationsScreen())),
                 badgeStream: NotificationService.unreadCount(uid),
               ),
               const Gap(10),
@@ -236,7 +235,7 @@ class _DonorMoreTab extends StatelessWidget {
                 subtitle: 'View and edit your profile',
                 color: AidColors.donorAccent,
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    aidRoute(const ProfileScreen())),
               ),
               const Gap(10),
               _Tile(
@@ -245,7 +244,7 @@ class _DonorMoreTab extends StatelessWidget {
                 subtitle: 'Account, notifications, privacy',
                 color: AidColors.textSecondary,
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                    aidRoute(const SettingsScreen())),
               ),
               const Gap(10),
               _Tile(
@@ -254,7 +253,7 @@ class _DonorMoreTab extends StatelessWidget {
                 subtitle: 'Hospitals, blood banks, govt schemes & more',
                 color: AidColors.ngoAccent,
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const WelfareResourcesScreen())),
+                    aidRoute(const WelfareResourcesScreen())),
               ),
               const Gap(10),
               _Tile(
@@ -263,7 +262,7 @@ class _DonorMoreTab extends StatelessWidget {
                 subtitle: 'Get in touch, onboard your NGO',
                 color: const Color(0xFF4F46E5),
                 onTap: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const ContactUsScreen())),
+                    aidRoute(const ContactUsScreen())),
               ),
               const Gap(10),
               _Tile(
@@ -557,7 +556,7 @@ class _DonorPostCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => DonationDetailScreen(post: post)),
+        aidRoute(DonationDetailScreen(post: post)),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -706,7 +705,7 @@ class _DonorPostCard extends StatelessWidget {
                       FilledButton(
                         onPressed: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => DonationDetailScreen(post: post)),
+                          aidRoute(DonationDetailScreen(post: post)),
                         ),
                         style: FilledButton.styleFrom(
                           backgroundColor: AidColors.donorAccent,
@@ -1197,7 +1196,7 @@ class _ImpactGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => ImpactGroupScreen(group: group))),
+          aidRoute(ImpactGroupScreen(group: group))),
       child: Container(
         width: 180,
         decoration: BoxDecoration(

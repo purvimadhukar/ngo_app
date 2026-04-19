@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../widgets/role_router.dart';
 
@@ -167,27 +168,27 @@ class _SplashScreenState extends State<SplashScreen>
 
                             const Gap(22),
 
-                            // AidBridge wordmark
+                            // AidBridge wordmark — Bricolage Grotesque
                             RichText(
-                              text: const TextSpan(
+                              text: TextSpan(
                                 children: [
                                   TextSpan(
                                     text: 'Aid',
-                                    style: TextStyle(
+                                    style: GoogleFonts.bricolageGrotesque(
                                       color: Colors.white,
-                                      fontSize: 42,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -2,
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -2.5,
                                       height: 1,
                                     ),
                                   ),
                                   TextSpan(
                                     text: 'Bridge',
-                                    style: TextStyle(
+                                    style: GoogleFonts.bricolageGrotesque(
                                       color: _emerald,
-                                      fontSize: 42,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -2,
+                                      fontSize: 48,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -2.5,
                                       height: 1,
                                     ),
                                   ),

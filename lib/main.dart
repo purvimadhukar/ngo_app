@@ -29,7 +29,37 @@ class AidBridgeApp extends StatelessWidget {
       title: 'AidBridge',
       debugShowCheckedModeBanner: false,
       theme: AidTheme.build(),
-      home: const SplashScreen(),   // ← starts with splash
+      home: const SplashScreen(),
+      // ── Smooth slide+fade transition for every route push ──────────────────
+      onGenerateRoute: (settings) => _buildRoute(settings),
+    );
+  }
+
+  static Route<dynamic> _buildRoute(RouteSettings settings) {
+    // Fallback — should never hit since we use Navigator.push directly,
+    // but this ensures any named route also gets the transition.
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (_, __, ___) => const SplashScreen(),
+      transitionsBuilder: _slideTransition,
+      transitionDuration: const Duration(milliseconds: 380),
+    );
+  }
+
+  static Widget _slideTransition(
+    BuildContext context,
+    Animation<double> anim,
+    Animation<double> secondaryAnim,
+    Widget child,
+  ) {
+    const begin = Offset(0.04, 0.0);
+    const end   = Offset.zero;
+    final tween = Tween(begin: begin, end: end)
+        .chain(CurveTween(curve: Curves.easeOutCubic));
+    final fade  = CurvedAnimation(parent: anim, curve: Curves.easeOut);
+    return FadeTransition(
+      opacity: fade,
+      child: SlideTransition(position: anim.drive(tween), child: child),
     );
   }
 }
