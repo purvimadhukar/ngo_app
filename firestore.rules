@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Posts — anyone logged in can read, only NGOs can write
+    match /posts/{postId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null &&
+        (request.auth.uid == resource.data.ngoId ||
+         request.auth.uid == resource.data.uid);
+    }
+
+    // Users — can read/write own profile
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Everything else — authenticated users can read/write
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

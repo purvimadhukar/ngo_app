@@ -98,7 +98,7 @@ class AidColors {
 class AidTextStyles {
   AidTextStyles._();
 
-  static TextStyle get _base => GoogleFonts.inter(
+  static TextStyle get _base => GoogleFonts.dmSans(
     color: AidColors.textPrimary,
     letterSpacing: -0.2,
   );

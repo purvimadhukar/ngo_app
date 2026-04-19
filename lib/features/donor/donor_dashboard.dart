@@ -378,25 +378,38 @@ class _FeedTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Single scrollable view — everything in one CustomScrollView so posts
-    // always render regardless of how many header cards there are.
+    // No orderBy — avoids silently dropping posts without createdAt field.
+    // Sort client-side instead. All active posts always show.
     final stream = FirebaseFirestore.instance
         .collection('posts')
-        .orderBy('createdAt', descending: true)
         .snapshots();
 
     return StreamBuilder<QuerySnapshot>(
       stream: stream,
       builder: (context, snap) {
-        // ── Client-side filter: active status + optional category ──
+        // ── Client-side filter + sort ──────────────────────────────
         final allDocs = snap.data?.docs ?? [];
         final docs = allDocs.where((d) {
           final data = d.data() as Map<String, dynamic>;
-          if ((data['status'] as String?) != 'active') return false;
+          // Show active OR any post without a status (legacy data)
+          final status = data['status'] as String?;
+          if (status != null && status != 'active') return false;
           if (filterCategory != 'All' &&
               (data['category'] as String?) != filterCategory) return false;
           return true;
         }).toList();
+
+        // Sort newest first client-side
+        docs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTs = aData['createdAt'];
+          final bTs = bData['createdAt'];
+          if (aTs == null && bTs == null) return 0;
+          if (aTs == null) return 1;
+          if (bTs == null) return -1;
+          return (bTs as dynamic).compareTo(aTs as dynamic);
+        });
 
         return CustomScrollView(
           slivers: [
@@ -404,12 +417,12 @@ class _FeedTab extends StatelessWidget {
             const SliverToBoxAdapter(child: _ImpactStatsCard()),
             // ── Services Grid ────────────────────────────────────────
             SliverToBoxAdapter(child: _ServicesGrid(onCategoryTap: onFilterChanged)),
-            // ── Manasa Medical Trust — Featured Partner ──────────────
-            const SliverToBoxAdapter(child: _ManasaFeaturedCard()),
             // ── Welfare Resource Directory ───────────────────────────
             const SliverToBoxAdapter(child: WelfareResourcesPreview()),
             // ── See → Feel → Act Impact Groups ──────────────────────
             const SliverToBoxAdapter(child: _ImpactGroupsRow()),
+            // ── Partner NGOs (Manasa first + others) ─────────────────
+            const SliverToBoxAdapter(child: _PartnerNgosRow()),
 
             // ── Category filter chips (sticky) ───────────────────────
             SliverPersistentHeader(
@@ -806,15 +819,61 @@ class _MyDonationsTab extends StatelessWidget {
   }
 }
 
-// ─── Manasa Medical Trust — Featured Partner Card ────────────────────────────
+// ─── Partner NGOs Row ─────────────────────────────────────────────────────────
 
-class _ManasaFeaturedCard extends StatelessWidget {
-  const _ManasaFeaturedCard();
+class _PartnerNgosRow extends StatelessWidget {
+  const _PartnerNgosRow();
 
-  static const _url = 'https://www.manasamedicaltrust.org';
+  static const _ngos = [
+    {
+      'name': 'Manasa Medical Trust',
+      'desc': 'Old age home & medical welfare',
+      'location': 'Bangalore',
+      'url': 'https://www.manasamedicaltrust.org',
+      'color': 0xFF7C3AED,
+      'icon': Icons.elderly_rounded,
+      'featured': true,
+    },
+    {
+      'name': 'HelpAge India',
+      'desc': 'Empowering older persons since 1978',
+      'location': 'Pan India',
+      'url': 'https://www.helpageindia.org',
+      'color': 0xFF1DB884,
+      'icon': Icons.favorite_rounded,
+      'featured': false,
+    },
+    {
+      'name': 'CRY India',
+      'desc': 'Child Rights and You',
+      'location': 'Pan India',
+      'url': 'https://www.cry.org',
+      'color': 0xFFFF5722,
+      'icon': Icons.child_care_rounded,
+      'featured': false,
+    },
+    {
+      'name': 'Goonj',
+      'desc': 'Urban to rural resource transfer',
+      'location': 'Delhi',
+      'url': 'https://goonj.org',
+      'color': 0xFFFF9800,
+      'icon': Icons.volunteer_activism_rounded,
+      'featured': false,
+    },
+    {
+      'name': 'Akshaya Patra',
+      'desc': 'Mid-day meal programme for children',
+      'location': 'Pan India',
+      'url': 'https://www.akshayapatra.org',
+      'color': 0xFF4F46E5,
+      'icon': Icons.restaurant_rounded,
+      'featured': false,
+    },
+  ];
 
-  Future<void> _open() async {
-    final uri = Uri.parse(_url);
+  Future<void> _open(String url) async {
+    final uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -822,89 +881,97 @@ class _ManasaFeaturedCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _open,
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF7C3AED).withValues(alpha: 0.3),
-              blurRadius: 12, offset: const Offset(0, 4),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          child: Text('Partner Organisations', style: AidTextStyles.headingMd),
         ),
-        child: Row(
-          children: [
-            // Logo placeholder
-            Container(
-              width: 52, height: 52,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: const Center(
-                child: Text('🏠', style: TextStyle(fontSize: 26)),
-              ),
-            ),
-            const Gap(14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          '✦ PARTNER NGO',
-                          style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1),
-                        ),
+        SizedBox(
+          height: 130,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: _ngos.length,
+            separatorBuilder: (_, __) => const Gap(12),
+            itemBuilder: (_, i) {
+              final n = _ngos[i];
+              final color = Color(n['color'] as int);
+              final icon  = n['icon'] as IconData;
+              final isFeatured = n['featured'] as bool;
+              return GestureDetector(
+                onTap: () => _open(n['url'] as String),
+                child: Container(
+                  width: 200,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [color, color.withValues(alpha: 0.75)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.25),
+                        blurRadius: 10, offset: const Offset(0, 3),
                       ),
                     ],
                   ),
-                  const Gap(4),
-                  const Text(
-                    'Manasa Medical Trust',
-                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(icon, color: Colors.white, size: 16),
+                          ),
+                          const Spacer(),
+                          if (isFeatured)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text('FEATURED',
+                                  style: TextStyle(color: Colors.white, fontSize: 7, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+                            ),
+                        ],
+                      ),
+                      const Spacer(),
+                      Text(n['name'] as String,
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800, height: 1.2)),
+                      const Gap(3),
+                      Text(n['desc'] as String,
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 10),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const Gap(2),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on_rounded, color: Colors.white.withValues(alpha: 0.6), size: 10),
+                          const Gap(2),
+                          Text(n['location'] as String,
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 10)),
+                          const Spacer(),
+                          Icon(Icons.open_in_new_rounded, color: Colors.white.withValues(alpha: 0.6), size: 11),
+                        ],
+                      ),
+                    ],
                   ),
-                  const Text(
-                    'Old age home & medical welfare, Hyderabad',
-                    style: TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            const Gap(8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(99),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Visit', style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.w800, fontSize: 12)),
-                  Gap(4),
-                  Icon(Icons.open_in_new_rounded, color: Color(0xFF7C3AED), size: 13),
-                ],
-              ),
-            ),
-          ],
+                ),
+              );
+            },
+          ),
         ),
-      ),
+        const Gap(4),
+      ],
     );
   }
 }
@@ -1210,67 +1277,74 @@ class _ServicesGrid extends StatelessWidget {
   const _ServicesGrid({required this.onCategoryTap});
 
   static const _services = [
-    {'icon': '🍚', 'label': 'Food', 'cat': 'food', 'color': 0xFFFF9800},
-    {'icon': '💊', 'label': 'Medical', 'cat': 'medical', 'color': 0xFFE91E63},
-    {'icon': '👕', 'label': 'Clothes', 'cat': 'clothes', 'color': 0xFF2196F3},
-    {'icon': '📚', 'label': 'Education', 'cat': 'education', 'color': 0xFF9C27B0},
-    {'icon': '👴', 'label': 'Old Age', 'cat': 'old age home', 'color': 0xFF7C3AED},
-    {'icon': '🌊', 'label': 'Disaster', 'cat': 'disaster relief', 'color': 0xFF00BCD4},
-    {'icon': '👶', 'label': 'Children', 'cat': 'children', 'color': 0xFFFF5722},
-    {'icon': '🌱', 'label': 'Environment', 'cat': 'environment', 'color': 0xFF4CAF50},
+    {'icon': Icons.restaurant_rounded,     'label': 'Food',        'cat': 'food',           'color': 0xFFFF9800},
+    {'icon': Icons.local_hospital_rounded, 'label': 'Medical',     'cat': 'medical',         'color': 0xFFE91E63},
+    {'icon': Icons.checkroom_rounded,      'label': 'Clothes',     'cat': 'clothes',         'color': 0xFF2196F3},
+    {'icon': Icons.menu_book_rounded,      'label': 'Education',   'cat': 'education',       'color': 0xFF9C27B0},
+    {'icon': Icons.elderly_rounded,        'label': 'Old Age',     'cat': 'old age home',    'color': 0xFF7C3AED},
+    {'icon': Icons.crisis_alert_rounded,   'label': 'Disaster',    'cat': 'disaster relief', 'color': 0xFF00BCD4},
+    {'icon': Icons.child_care_rounded,     'label': 'Children',    'cat': 'children',        'color': 0xFFFF5722},
+    {'icon': Icons.eco_rounded,            'label': 'Environment', 'cat': 'environment',     'color': 0xFF4CAF50},
   ];
 
   @override
   Widget build(BuildContext context) {
+    final w = MediaQuery.of(context).size.width;
+    final itemW = (w - 32 - 21) / 4; // 4 per row, 16px padding each side, 3×7px gaps
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: Row(
             children: [
               Text('Causes', style: AidTextStyles.headingMd),
               const Spacer(),
               GestureDetector(
                 onTap: () => onCategoryTap('All'),
-                child: Text(
-                  'See all',
-                  style: AidTextStyles.labelMd.copyWith(color: AidColors.donorAccent),
-                ),
+                child: Text('See all',
+                    style: AidTextStyles.labelMd.copyWith(color: AidColors.donorAccent)),
               ),
             ],
           ),
         ),
-        SizedBox(
-          height: 88,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.05,
+            ),
             itemCount: _services.length,
-            separatorBuilder: (_, __) => const Gap(10),
             itemBuilder: (_, i) {
               final s = _services[i];
               final color = Color(s['color'] as int);
+              final icon  = s['icon'] as IconData;
               return GestureDetector(
                 onTap: () => onCategoryTap(s['cat'] as String),
                 child: Container(
-                  width: 72,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
+                    color: color.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: color.withValues(alpha: 0.2)),
+                    border: Border.all(color: color.withValues(alpha: 0.18)),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(s['icon'] as String, style: const TextStyle(fontSize: 24)),
-                      const Gap(4),
+                      Icon(icon, color: color, size: 24),
+                      const Gap(5),
                       Text(
                         s['label'] as String,
                         style: AidTextStyles.labelSm.copyWith(
                           color: color,
                           fontWeight: FontWeight.w700,
+                          fontSize: 10,
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1281,7 +1355,7 @@ class _ServicesGrid extends StatelessWidget {
             },
           ),
         ),
-        const Gap(6),
+        const Gap(8),
       ],
     );
   }
