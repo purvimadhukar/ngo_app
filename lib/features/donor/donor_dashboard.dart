@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:gap/gap.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/app_theme.dart';
 import '../../models/ngo_post.dart';
@@ -1373,21 +1374,19 @@ class _ServicesGrid extends StatelessWidget {
   const _ServicesGrid({required this.onCategoryTap});
 
   static const _services = [
-    {'icon': Icons.restaurant_rounded,     'label': 'Food',        'cat': 'food',           'color': 0xFFFF9800},
-    {'icon': Icons.local_hospital_rounded, 'label': 'Medical',     'cat': 'medical',         'color': 0xFF9B4189},
-    {'icon': Icons.checkroom_rounded,      'label': 'Clothes',     'cat': 'clothes',         'color': 0xFF9B4189},
-    {'icon': Icons.menu_book_rounded,      'label': 'Education',   'cat': 'education',       'color': 0xFF9C27B0},
-    {'icon': Icons.elderly_rounded,        'label': 'Old Age',     'cat': 'old age home',    'color': 0xFF9B4189},
-    {'icon': Icons.crisis_alert_rounded,   'label': 'Disaster',    'cat': 'disaster relief', 'color': 0xFF00BCD4},
-    {'icon': Icons.child_care_rounded,     'label': 'Children',    'cat': 'children',        'color': 0xFFFF5722},
-    {'icon': Icons.eco_rounded,            'label': 'Environment', 'cat': 'environment',     'color': 0xFF4CAF50},
+    {'image': 'assets/images/cat_food.png',        'label': 'Food',        'cat': 'food'},
+    {'image': 'assets/images/cat_medical.png',     'label': 'Medical',     'cat': 'medical'},
+    {'image': 'assets/images/cat_clothes.png',     'label': 'Clothes',     'cat': 'clothes'},
+    {'image': 'assets/images/cat_education.png',   'label': 'Education',   'cat': 'education'},
+    {'image': 'assets/images/cat_oldagehome.png',  'label': 'Old Age',     'cat': 'old age home'},
+    {'image': 'assets/images/cat_disaster.png',    'label': 'Disaster',    'cat': 'disaster relief'},
+    {'image': 'assets/images/cat_children.png',    'label': 'Children',    'cat': 'children'},
+    {'image': 'assets/images/cat_environment.png', 'label': 'Environment', 'cat': 'environment'},
+    {'image': 'assets/images/cat_groceries.png',   'label': 'Groceries',   'cat': 'groceries'},
   ];
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
-    final itemW = (w - 32 - 21) / 4; // 4 per row, 16px padding each side, 3×7px gaps
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1405,44 +1404,64 @@ class _ServicesGrid extends StatelessWidget {
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 1.05,
-            ),
+        SizedBox(
+          height: 110,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: _services.length,
+            separatorBuilder: (_, __) => const Gap(10),
             itemBuilder: (_, i) {
               final s = _services[i];
-              final color = Color(s['color'] as int);
-              final icon  = s['icon'] as IconData;
               return GestureDetector(
                 onTap: () => onCategoryTap(s['cat'] as String),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: color.withValues(alpha: 0.18)),
-                  ),
+                child: SizedBox(
+                  width: 90,
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(icon, color: color, size: 24),
-                      const Gap(5),
-                      Text(
-                        s['label'] as String,
-                        style: AidTextStyles.labelSm.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10,
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Image.asset(
+                                s['image'] as String,
+                                fit: BoxFit.cover,
+                              ),
+                              // subtle dark overlay so label pops
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.black.withValues(alpha: 0.55),
+                                    ],
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                  ),
+                                ),
+                              ),
+                              // label at bottom
+                              Positioned(
+                                bottom: 6, left: 0, right: 0,
+                                child: Text(
+                                  s['label'] as String,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.2,
+                                    shadows: [
+                                      Shadow(color: Colors.black54, blurRadius: 4),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
