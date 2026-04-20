@@ -8,14 +8,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/app_theme.dart';
+import '../../models/resident.dart';
 
 class AddResidentScreen extends StatefulWidget {
   final String careHomeId;
   final String careHomeName;
+  final Resident? existing; // non-null = edit mode
   const AddResidentScreen({
     super.key,
     required this.careHomeId,
     required this.careHomeName,
+    this.existing,
   });
 
   @override
@@ -57,10 +60,26 @@ class _AddResidentScreenState extends State<AddResidentScreen> {
     ('critical', 'Critical', Color(0xFFE8514A)),
   ];
 
+  String? _existingPhotoUrl; // used in edit mode
+
   @override
   void initState() {
     super.initState();
     _careHomeName = widget.careHomeName;
+    // Pre-fill fields if editing
+    final e = widget.existing;
+    if (e != null) {
+      _nameCtrl.text     = e.name;
+      _storyCtrl.text    = e.story;
+      _locationCtrl.text = e.careHomeLocation;
+      _targetCtrl.text   = e.monthlyTarget == 0 ? '' : e.monthlyTarget.toStringAsFixed(0);
+      _age               = e.age;
+      _gender            = e.gender;
+      _urgency           = e.urgency;
+      _careHomeName      = e.careHomeName;
+      _selectedNeeds.addAll(e.needs);
+      _existingPhotoUrl  = e.photoUrl.isNotEmpty ? e.photoUrl : null;
+    }
   }
 
   @override
@@ -94,7 +113,8 @@ class _AddResidentScreenState extends State<AddResidentScreen> {
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    if (_photoBytes == null) {
+    final isEditing = widget.existing != null;
+    if (!isEditing && _photoBytes == null) {
       setState(() => _error = 'Please add a photo first.');
       return;
     }
@@ -107,46 +127,61 @@ class _AddResidentScreenState extends State<AddResidentScreen> {
 
     try {
       final uid = FirebaseAuth.instance.currentUser!.uid;
-      final docRef = FirebaseFirestore.instance.collection('residents').doc();
+      String photoUrl = _existingPhotoUrl ?? '';
 
-      // Upload photo to Storage
-      final storageRef = FirebaseStorage.instance
-          .ref('residents/${docRef.id}/photo.jpg');
-      final task = storageRef.putData(
-        _photoBytes!,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
+      if (_photoBytes != null) {
+        // Upload new or replacement photo
+        final residentId = isEditing
+            ? widget.existing!.id
+            : FirebaseFirestore.instance.collection('residents').doc().id;
+        final storageRef = FirebaseStorage.instance
+            .ref('residents/$residentId/photo.jpg');
+        final task = storageRef.putData(
+          _photoBytes!,
+          SettableMetadata(contentType: 'image/jpeg'),
+        );
+        task.snapshotEvents.listen((snap) {
+          if (snap.totalBytes > 0) {
+            setState(() =>
+              _uploadProgress = snap.bytesTransferred / snap.totalBytes);
+          }
+        });
+        await task.timeout(const Duration(seconds: 30));
+        photoUrl = await storageRef.getDownloadURL();
+      }
 
-      task.snapshotEvents.listen((snap) {
-        if (snap.totalBytes > 0) {
-          setState(() =>
-            _uploadProgress = snap.bytesTransferred / snap.totalBytes);
-        }
-      });
+      final data = {
+        'name':             _nameCtrl.text.trim(),
+        'age':              _age,
+        'gender':           _gender,
+        'photoUrl':         photoUrl,
+        'careHomeName':     _careHomeName,
+        'careHomeLocation': _locationCtrl.text.trim(),
+        'careHomeId':       widget.careHomeId,
+        'addedBy':          uid,
+        'needs':            _selectedNeeds.toList(),
+        'story':            _storyCtrl.text.trim(),
+        'urgency':          _urgency,
+        'monthlyTarget':    double.tryParse(_targetCtrl.text) ?? 0,
+        'isActive':         true,
+      };
 
-      await task.timeout(const Duration(seconds: 30));
-      final photoUrl = await storageRef.getDownloadURL();
-
-      // Save to Firestore
-      await docRef.set({
-        'name':              _nameCtrl.text.trim(),
-        'age':               _age,
-        'gender':            _gender,
-        'photoUrl':          photoUrl,
-        'careHomeName':      _careHomeName,
-        'careHomeLocation':  _locationCtrl.text.trim(),
-        'careHomeId':        widget.careHomeId,
-        'addedBy':           uid,
-        'needs':             _selectedNeeds.toList(),
-        'story':             _storyCtrl.text.trim(),
-        'urgency':           _urgency,
-        'monthlyTarget':     double.tryParse(_targetCtrl.text) ?? 0,
-        'monthlyRaised':     0,
-        'totalDonations':    0,
-        'sponsorsCount':     0,
-        'createdAt':         FieldValue.serverTimestamp(),
-        'isActive':          true,
-      });
+      if (isEditing) {
+        // Update existing document
+        await FirebaseFirestore.instance
+            .collection('residents')
+            .doc(widget.existing!.id)
+            .update(data);
+      } else {
+        // Create new document
+        await FirebaseFirestore.instance.collection('residents').add({
+          ...data,
+          'monthlyRaised':  0,
+          'totalDonations': 0,
+          'sponsorsCount':  0,
+          'createdAt':      FieldValue.serverTimestamp(),
+        });
+      }
 
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -170,7 +205,7 @@ class _AddResidentScreenState extends State<AddResidentScreen> {
           color: AidColors.textPrimary,
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Add Resident Profile',
+        title: Text(widget.existing != null ? 'Edit Resident Profile' : 'Add Resident Profile',
           style: GoogleFonts.syne(
             color: AidColors.textPrimary,
             fontSize: 18, fontWeight: FontWeight.w700)),

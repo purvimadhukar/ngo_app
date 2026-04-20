@@ -14,6 +14,9 @@ import '../common/contact_us_screen.dart';
 import '../common/theme_control_panel.dart';
 import '../../models/resident.dart';
 import 'add_resident_screen.dart';
+import '../../services/notification_service.dart';
+import '../common/notifications_screen.dart';
+import 'ngo_analytics_screen.dart';
 
 class NgoDashboard extends StatefulWidget {
   const NgoDashboard({super.key});
@@ -204,6 +207,57 @@ class _NgoDashboardState extends State<NgoDashboard>
                         ],
                       ),
                     ),
+                  ),
+                  // ── Notification bell ───────────────────────────────────
+                  StreamBuilder<int>(
+                    stream: NotificationService.unreadCount(_uid),
+                    builder: (context, snap) {
+                      final unread = snap.data ?? 0;
+                      return Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              unread > 0
+                                  ? Icons.notifications_rounded
+                                  : Icons.notifications_outlined,
+                              color: Colors.white.withValues(alpha: 0.9),
+                              size: 22,
+                            ),
+                            tooltip: 'Notifications',
+                            onPressed: () => Navigator.push(context,
+                                MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+                          ),
+                          if (unread > 0)
+                            Positioned(
+                              top: 6, right: 6,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE8514A),
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                                child: Text(
+                                  unread > 9 ? '9+' : '$unread',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.bar_chart_rounded, color: Colors.white.withValues(alpha: 0.85), size: 22),
+                    tooltip: 'Analytics',
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const NgoAnalyticsScreen())),
                   ),
                   IconButton(
                     icon: Icon(Icons.palette_outlined, color: Colors.white.withValues(alpha: 0.8), size: 20),
@@ -2506,10 +2560,87 @@ class _ResidentCard extends StatelessWidget {
   Color get _urgencyColor => Color(
       Resident.urgencyColors[r.urgency] ?? 0xFF2B8CE6);
 
+  void _showActions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AidColors.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                  color: AidColors.borderDefault,
+                  borderRadius: BorderRadius.circular(2)),
+            ),
+            Text(r.name, style: AidTextStyles.headingMd),
+            const Gap(4),
+            Text('${r.age} yrs · ${r.urgency}',
+                style: AidTextStyles.bodyMd.copyWith(color: AidColors.textMuted)),
+            const Gap(20),
+            ListTile(
+              leading: const Icon(Icons.edit_rounded, color: AidColors.ngoAccent),
+              title: const Text('Edit Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => AddResidentScreen(
+                    careHomeId: r.careHomeId,
+                    careHomeName: r.careHomeName,
+                    existing: r,
+                  ),
+                ));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.visibility_rounded, color: AidColors.ngoAccent),
+              title: const Text('View Public Profile'),
+              onTap: () {
+                Navigator.pop(context);
+                // opens donor's detail view
+                showDialog(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    backgroundColor: AidColors.surface,
+                    title: Text(r.name),
+                    content: Text('${r.story}\n\nNeeds: ${r.needs.join(", ")}'),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Close')),
+                    ],
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.toggle_off_rounded,
+                  color: r.isActive ? AidColors.error : AidColors.success),
+              title: Text(r.isActive ? 'Deactivate' : 'Reactivate'),
+              onTap: () async {
+                Navigator.pop(context);
+                await FirebaseFirestore.instance
+                    .collection('residents')
+                    .doc(r.id)
+                    .update({'isActive': !r.isActive});
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () => _showActions(context),
+      onLongPress: () => _showActions(context),
       child: Container(
         decoration: BoxDecoration(
           color: AidColors.surface,

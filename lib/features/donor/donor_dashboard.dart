@@ -24,6 +24,8 @@ import '../common/contact_us_screen.dart';
 import '../common/theme_control_panel.dart';
 import '../../models/resident.dart';
 import 'resident_detail_screen.dart';
+import 'donor_impact_screen.dart';
+import 'resident_browse_screen.dart';
 
 class DonorDashboard extends StatefulWidget {
   const DonorDashboard({super.key});
@@ -42,6 +44,7 @@ class _DonorDashboardState extends State<DonorDashboard> {
     final pages = [
       const _FeedPage(),
       const DonationHistoryScreen(),
+      const DonorImpactScreen(),
       const DonorGroupsScreen(),
       const _DonorMoreTab(),
     ];
@@ -66,6 +69,11 @@ class _DonorDashboardState extends State<DonorDashboard> {
                 icon: Icon(Icons.history_outlined),
                 selectedIcon: Icon(Icons.history),
                 label: 'History',
+              ),
+              const NavigationDestination(
+                icon: Icon(Icons.auto_graph_outlined),
+                selectedIcon: Icon(Icons.auto_graph_rounded),
+                label: 'My Impact',
               ),
               const NavigationDestination(
                 icon: Icon(Icons.people_outline_rounded),
@@ -213,6 +221,24 @@ class _DonorMoreTab extends StatelessWidget {
             children: [
               Text('More', style: AidTextStyles.displaySm),
               const Gap(24),
+              _Tile(
+                icon: Icons.auto_graph_rounded,
+                title: 'My Impact',
+                subtitle: 'Your giving history, score & sponsored residents',
+                color: AidColors.donorAccent,
+                onTap: () => Navigator.push(context,
+                    aidRoute(const DonorImpactScreen())),
+              ),
+              const Gap(10),
+              _Tile(
+                icon: Icons.elderly_rounded,
+                title: 'Browse Residents',
+                subtitle: 'Find people who need your help',
+                color: const Color(0xFF4CAF50),
+                onTap: () => Navigator.push(context,
+                    aidRoute(const ResidentBrowseScreen())),
+              ),
+              const Gap(10),
               _Tile(
                 icon: Icons.search_rounded,
                 title: 'Search',
@@ -435,6 +461,64 @@ class _FeedTab extends StatelessWidget {
             // ── Partner NGOs (Manasa first + others) ─────────────────
             const SliverToBoxAdapter(child: _PartnerNgosRow()),
             const SliverToBoxAdapter(child: _ResidentProfilesRow()),
+
+            // ── Browse Residents CTA ─────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: GestureDetector(
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const ResidentBrowseScreen())),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF4CAF50).withValues(alpha: 0.9),
+                          const Color(0xFF2E7D32),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.elderly_rounded,
+                            color: Colors.white, size: 28),
+                        const Gap(14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Browse Residents',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const Gap(2),
+                              Text(
+                                'Find people in care homes who need your direct support',
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.85),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Gap(8),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            color: Colors.white, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
             // ── Category filter chips (sticky) ───────────────────────
             SliverPersistentHeader(
