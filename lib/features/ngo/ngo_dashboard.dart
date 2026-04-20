@@ -11,6 +11,9 @@ import 'create_post_screen.dart';
 import 'add_proof_screen.dart';
 import 'ngo_verification_screen.dart';
 import '../common/contact_us_screen.dart';
+import '../common/theme_control_panel.dart';
+import '../../models/resident.dart';
+import 'add_resident_screen.dart';
 
 class NgoDashboard extends StatefulWidget {
   const NgoDashboard({super.key});
@@ -31,7 +34,7 @@ class _NgoDashboardState extends State<NgoDashboard>
   void initState() {
     super.initState();
     _uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    _tab = TabController(length: 5, vsync: this);
+    _tab = TabController(length: 6, vsync: this);
     _loadProfile();
   }
 
@@ -84,7 +87,7 @@ class _NgoDashboardState extends State<NgoDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AidColors.background,
+      backgroundColor: AidColors.ngoBackground,
       body: Column(
         children: [
           _buildHeroHeader(),
@@ -97,6 +100,7 @@ class _NgoDashboardState extends State<NgoDashboard>
                 _MyPostsTab(uid: _uid),
                 _ActivitiesTab(uid: _uid, ngoName: _ngoName),
                 _ImpactGroupsTab(uid: _uid, ngoName: _ngoName),
+                _ResidentsTab(uid: _uid, careHomeName: _ngoName),
                 const _ResourcesTab(),
                 _ImpactTab(uid: _uid),
               ],
@@ -116,7 +120,7 @@ class _NgoDashboardState extends State<NgoDashboard>
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF0A3D2E), Color(0xFF0F6E56), Color(0xFF1DB884)],
+          colors: [Color(0xFF200828), Color(0xFF1A3A6E), Color(0xFF2B8CE6)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -200,6 +204,12 @@ class _NgoDashboardState extends State<NgoDashboard>
                         ],
                       ),
                     ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.palette_outlined, color: Colors.white.withValues(alpha: 0.8), size: 20),
+                    tooltip: 'Customise',
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const ThemeControlPanel())),
                   ),
                   IconButton(
                     icon: Icon(Icons.contact_support_outlined, color: Colors.white.withValues(alpha: 0.6), size: 20),
@@ -319,11 +329,12 @@ class _NgoDashboardState extends State<NgoDashboard>
           unselectedLabelColor: AidColors.textMuted,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 11),
-          isScrollable: false,
+          isScrollable: true,
           tabs: const [
             Tab(text: 'Posts'),
             Tab(text: 'Events'),
             Tab(text: 'Groups'),
+            Tab(text: 'Residents'),
             Tab(text: 'Resources'),
             Tab(text: 'Impact'),
           ],
@@ -845,8 +856,8 @@ class _ImpactGroupsTabState extends State<_ImpactGroupsTab> {
                 children: ImpactGroupType.values.map((t) {
                   final sel = _type == t;
                   final col = t == ImpactGroupType.children ? const Color(0xFFFF9800)
-                      : t == ImpactGroupType.elderly ? const Color(0xFF7C3AED)
-                      : t == ImpactGroupType.women ? const Color(0xFFE91E63)
+                      : t == ImpactGroupType.elderly ? AidColors.ngoAccent
+                      : t == ImpactGroupType.women ? AidColors.ngoAccent
                       : AidColors.ngoAccent;
                   return Expanded(
                     child: GestureDetector(
@@ -1061,8 +1072,8 @@ class _ImpactGroupsTabState extends State<_ImpactGroupsTab> {
               itemBuilder: (_, i) {
                 final g = ImpactGroup.fromFirestore(docs[i]);
                 final col = g.type == ImpactGroupType.children ? const Color(0xFFFF9800)
-                    : g.type == ImpactGroupType.elderly ? const Color(0xFF7C3AED)
-                    : g.type == ImpactGroupType.women ? const Color(0xFFE91E63)
+                    : g.type == ImpactGroupType.elderly ? AidColors.ngoAccent
+                    : g.type == ImpactGroupType.women ? AidColors.ngoAccent
                     : AidColors.ngoAccent;
                 return Container(
                   padding: const EdgeInsets.all(14),
@@ -1168,7 +1179,7 @@ class _ActivitiesTabState extends State<_ActivitiesTab> {
                     width: 40, height: 40,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AidColors.ngoAccent, Color(0xFF0F9E6E)],
+                        colors: [AidColors.ngoAccent, AidColors.ngoAccentMuted],
                         begin: Alignment.topLeft, end: Alignment.bottomRight,
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -1552,7 +1563,7 @@ class _ResourcesTabState extends State<_ResourcesTab> {
       icon: Icons.local_hospital_rounded,
       title: 'Government Hospitals',
       subtitle: 'Free & subsidized treatment centers',
-      color: Color(0xFFE91E63),
+      color: AidColors.ngoAccent,
       items: [
         _ResItem('AIIMS', 'All India Institute of Medical Sciences — free treatment for all citizens',
             '011-26588500', 'Delhi & multiple cities'),
@@ -1600,7 +1611,7 @@ class _ResourcesTabState extends State<_ResourcesTab> {
       icon: Icons.airport_shuttle_rounded,
       title: 'Ambulance Services',
       subtitle: 'Emergency & patient transport',
-      color: Color(0xFF2196F3),
+      color: AidColors.ngoAccent,
       items: [
         _ResItem('108 — Emergency Ambulance', 'Free government advanced life support — 24/7 response',
             '108', 'Pan India (All states)'),
@@ -1616,7 +1627,7 @@ class _ResourcesTabState extends State<_ResourcesTab> {
       icon: Icons.home_rounded,
       title: 'Shelters & Welfare Homes',
       subtitle: 'Old age homes, orphanages & women shelters',
-      color: Color(0xFF7C3AED),
+      color: AidColors.ngoAccent,
       items: [
         _ResItem('HelpAge India', 'Old age homes, elder helpline, legal aid & mobile health for seniors',
             '1800-180-1253', 'Pan India (Toll Free)'),
@@ -2413,4 +2424,162 @@ class _StatusChip extends StatelessWidget {
           style: AidTextStyles.labelSm.copyWith(color: _color, fontWeight: FontWeight.w700, fontSize: 9),
         ),
       );
+}
+// ─── Residents Tab ─────────────────────────────────────────────────────────────
+
+class _ResidentsTab extends StatelessWidget {
+  final String uid;
+  final String careHomeName;
+  const _ResidentsTab({required this.uid, required this.careHomeName});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('residents')
+          .where('careHomeId', isEqualTo: uid)
+          .where('isActive', isEqualTo: true)
+          .snapshots(),
+      builder: (context, snap) {
+        final residents = (snap.data?.docs ?? [])
+            .map((d) => Resident.fromDoc(d))
+            .toList();
+
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          floatingActionButton: FloatingActionButton.extended(
+            backgroundColor: AidColors.ngoAccent,
+            onPressed: () async {
+              await Navigator.push(context, MaterialPageRoute(
+                builder: (_) => AddResidentScreen(
+                  careHomeId: uid,
+                  careHomeName: careHomeName,
+                ),
+              ));
+            },
+            icon: const Icon(Icons.person_add_rounded, color: Colors.white),
+            label: Text('Add Resident',
+              style: GoogleFonts.syne(
+                color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
+          body: residents.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.people_outline_rounded,
+                          size: 60, color: AidColors.textMuted),
+                      const Gap(16),
+                      Text('No residents yet',
+                        style: AidTextStyles.headingMd),
+                      const Gap(8),
+                      Text(
+                        'Tap "Add Resident" when you visit\na care home to create profiles.',
+                        textAlign: TextAlign.center,
+                        style: AidTextStyles.bodyMd.copyWith(
+                            color: AidColors.textMuted)),
+                    ],
+                  ),
+                )
+              : GridView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.72,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: residents.length,
+                  itemBuilder: (_, i) => _ResidentCard(r: residents[i]),
+                ),
+        );
+      },
+    );
+  }
+}
+
+class _ResidentCard extends StatelessWidget {
+  final Resident r;
+  const _ResidentCard({required this.r});
+
+  Color get _urgencyColor => Color(
+      Resident.urgencyColors[r.urgency] ?? 0xFF2B8CE6);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        decoration: BoxDecoration(
+          color: AidColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AidColors.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Photo
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16)),
+              child: r.photoUrl.isNotEmpty
+                  ? Image.network(
+                      r.photoUrl,
+                      height: 130, width: double.infinity,
+                      fit: BoxFit.cover,
+                    )
+                  : Container(
+                      height: 130,
+                      color: AidColors.elevated,
+                      child: const Center(
+                        child: Icon(Icons.person_rounded,
+                            size: 48, color: AidColors.textMuted)),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(r.name,
+                        style: AidTextStyles.labelLg,
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    Container(
+                      width: 8, height: 8,
+                      decoration: BoxDecoration(
+                        color: _urgencyColor, shape: BoxShape.circle),
+                    ),
+                  ]),
+                  const Gap(2),
+                  Text('${r.age} yrs',
+                    style: AidTextStyles.caption.copyWith(
+                        color: AidColors.textMuted)),
+                  const Gap(6),
+                  Wrap(
+                    spacing: 4, runSpacing: 4,
+                    children: r.needs.take(2).map((n) => Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AidColors.ngoAccent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                      child: Text(n,
+                        style: GoogleFonts.spaceGrotesk(
+                          color: AidColors.ngoAccent,
+                          fontSize: 10, fontWeight: FontWeight.w600)),
+                    )).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

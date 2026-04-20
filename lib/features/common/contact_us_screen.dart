@@ -44,7 +44,7 @@ class ContactUsScreen extends StatelessWidget {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF1A0A3D), Color(0xFF4F46E5), Color(0xFF8B7FE8)],
+                  colors: [Color(0xFF011A0F), AidColors.donorAccent, AidColors.donorAccent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -134,7 +134,7 @@ class ContactUsScreen extends StatelessWidget {
                 const Gap(10),
                 _ContactCard(
                   icon: Icons.language_rounded,
-                  color: const Color(0xFF4F46E5),
+                  color: AidColors.donorAccent,
                   title: 'Website',
                   subtitle: _website,
                   onTap: () => _launch(_website),
@@ -151,7 +151,7 @@ class ContactUsScreen extends StatelessWidget {
                       child: _SocialButton(
                         icon: Icons.camera_alt_outlined,
                         label: 'Instagram',
-                        color: const Color(0xFFE91E63),
+                        color: AidColors.donorAccent,
                         onTap: () => _launch(_instagram),
                       ),
                     ),

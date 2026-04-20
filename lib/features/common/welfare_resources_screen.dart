@@ -35,7 +35,7 @@ const kWelfareCategories = <WelfareCategory>[
     icon: Icons.local_hospital_rounded,
     title: 'Government Hospitals',
     subtitle: 'Free & subsidized treatment centers',
-    color: Color(0xFFE91E63),
+    color: AidColors.donorAccent,
     items: [
       WelfareResource('AIIMS', 'All India Institute of Medical Sciences — free treatment for all citizens',
           '011-26588500', 'Delhi & multiple cities'),
@@ -83,7 +83,7 @@ const kWelfareCategories = <WelfareCategory>[
     icon: Icons.airport_shuttle_rounded,
     title: 'Ambulance Services',
     subtitle: 'Emergency & patient transport',
-    color: Color(0xFF2196F3),
+    color: AidColors.donorAccent,
     items: [
       WelfareResource('108 Emergency Ambulance', 'Free government advanced life support — 24/7 response',
           '108', 'Pan India (All states)'),
@@ -99,7 +99,7 @@ const kWelfareCategories = <WelfareCategory>[
     icon: Icons.home_rounded,
     title: 'Shelters & Welfare Homes',
     subtitle: 'Old age homes, orphanages & women shelters',
-    color: Color(0xFF7C3AED),
+    color: AidColors.donorAccent,
     items: [
       WelfareResource('HelpAge India', 'Old age homes, elder helpline, legal aid & mobile healthcare for seniors',
           '1800-180-1253', 'Pan India (Toll Free)'),

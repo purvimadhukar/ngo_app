@@ -285,10 +285,10 @@ class _PostTile extends StatelessWidget {
   Color _categoryColor(String cat) {
     const colors = {
       'food': Color(0xFFF0A500),
-      'clothes': Color(0xFF8B7FE8),
+      'clothes': AidColors.donorAccent,
       'medical': Color(0xFFE8514A),
-      'education': Color(0xFF4A90E8),
-      'funds': Color(0xFF1DB884),
+      'education': AidColors.donorAccent,
+      'funds': AidColors.donorAccent,
     };
     return colors[cat] ?? AidColors.textSecondary;
   }

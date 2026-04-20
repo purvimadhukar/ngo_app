@@ -13,14 +13,23 @@ import 'package:google_fonts/google_fonts.dart';
 class AidGradients {
   AidGradients._();
 
-  static const emerald = LinearGradient(
-    colors: [Color(0xFF1DB884), Color(0xFF0F9E6E)],
+  // NGO: dark purple → navy blue  (radial, mimicked as linear)
+  static const ngo = LinearGradient(
+    colors: [Color(0xFF500F55), Color(0xFF0B5395)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
+  // Donor: near-black → deep magenta
   static const donor = LinearGradient(
-    colors: [Color(0xFF8B7FE8), Color(0xFF6356C8)],
+    colors: [Color(0xFF080707), Color(0xFF6E2B62)],
+    begin: Alignment.bottomRight,
+    end: Alignment.topLeft,
+  );
+
+  // Login: dark red-black → teal/cyan
+  static const login = LinearGradient(
+    colors: [Color(0xFF0F0202), Color(0xFF24A3BE)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -31,14 +40,15 @@ class AidGradients {
     end: Alignment.bottomRight,
   );
 
-  static const purple = LinearGradient(
-    colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)],
+  static const heroCard = LinearGradient(
+    colors: [Color(0xFF1A1A1F), Color(0xFF111115)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  static const heroCard = LinearGradient(
-    colors: [Color(0xFF1A1A1F), Color(0xFF111115)],
+  // Keep emerald for volunteer/misc
+  static const emerald = LinearGradient(
+    colors: [Color(0xFF1DB884), Color(0xFF0F9E6E)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -46,10 +56,10 @@ class AidGradients {
   static LinearGradient roleGradient(String role) {
     switch (role) {
       case 'ngo':
-      case 'careHome': return emerald;
+      case 'careHome': return ngo;
       case 'donor':    return donor;
       case 'volunteer':return volunteer;
-      default:         return emerald;
+      default:         return ngo;
     }
   }
 }
@@ -63,14 +73,17 @@ class AidColors {
   static const elevated    = Color(0xFF18181E);
   static const overlay     = Color(0xFF222228);
 
-  // Role accents
-  static const ngoAccent       = Color(0xFF1DB884);
-  static const ngoAccentMuted  = Color(0xFF0F6E56);
-  static const ngoAccentDim    = Color(0xFF0A3D30);
+  // NGO role — purple/blue palette
+  static const ngoAccent       = Color(0xFF2B8CE6);   // bright navy blue
+  static const ngoAccentMuted  = Color(0xFF1A5FA0);
+  static const ngoAccentDim    = Color(0xFF0A1E36);
+  static const ngoBackground   = Color(0xFF06040E);   // very dark purple-blue
 
-  static const donorAccent      = Color(0xFF8B7FE8);
-  static const donorAccentMuted = Color(0xFF534AB7);
-  static const donorAccentDim   = Color(0xFF1E1A3D);
+  // Donor role — magenta palette
+  static const donorAccent      = Color(0xFF9B4189);  // bright magenta
+  static const donorAccentMuted = Color(0xFF6E2B62);
+  static const donorAccentDim   = Color(0xFF22091E);
+  static const donorBackground  = Color(0xFF08050A);  // very dark magenta-black
 
   static const volunteerAccent      = Color(0xFFE8654A);
   static const volunteerAccentMuted = Color(0xFF993C1D);
@@ -80,7 +93,7 @@ class AidColors {
   static const success = Color(0xFF34C77B);
   static const warning = Color(0xFFF0A500);
   static const error   = Color(0xFFE8514A);
-  static const info    = Color(0xFF4A90E8);
+  static const info    = Color(0xFF1DB884);
 
   // Text
   static const textPrimary   = Color(0xFFF2F2F3);
@@ -201,7 +214,9 @@ Route<T> aidRoute<T>(Widget page) => PageRouteBuilder<T>(
 class AidTheme {
   AidTheme._();
 
-  static ThemeData build({Color roleAccent = AidColors.ngoAccent}) {
+  static ThemeData build({Color roleAccent = AidColors.ngoAccent, Color? primaryColor}) {
+    // primaryColor from ThemeService overrides roleAccent when set
+    if (primaryColor != null) roleAccent = primaryColor;
     final cs = ColorScheme.dark(
       primary:                     roleAccent,
       onPrimary:                   AidColors.background,

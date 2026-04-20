@@ -8,24 +8,30 @@ import '../../widgets/role_router.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
-
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late final AnimationController _bgCtrl;
-  late final AnimationController _contentCtrl;
+  // Blob drift controllers
+  late final AnimationController _blob1;
+  late final AnimationController _blob2;
+  late final AnimationController _blob3;
+  // Content entrance
+  late final AnimationController _enter;
+  // Loader spinner
+  late final AnimationController _loader;
 
-  late final Animation<double> _logoScale;
-  late final Animation<double> _logoFade;
-  late final Animation<double> _taglineFade;
-  late final Animation<double> _dotsOpacity;
+  late final Animation<double> _wordFade;
+  late final Animation<double> _wordSlide;
+  late final Animation<double> _tagFade;
+  late final Animation<double> _loaderFade;
 
-  static const _emerald = Color(0xFF1DB884);
-  static const _purple  = Color(0xFF8B7FE8);
-  static const _amber   = Color(0xFFE8654A);
+  static const _bg     = Color(0xFF07070A);
+  static const _green  = Color(0xFF1DB884);
+  static const _purple = Color(0xFF1DB884);
+  static const _coral  = Color(0xFFE8654A);
 
   @override
   void initState() {
@@ -34,67 +40,44 @@ class _SplashScreenState extends State<SplashScreen>
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light,
-      systemNavigationBarColor: Color(0xFF060608),
+      systemNavigationBarColor: _bg,
     ));
 
-    // Looping background pulse
-    _bgCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
+    // Blobs — each on its own slow loop, slightly different durations
+    _blob1 = AnimationController(vsync: this, duration: const Duration(seconds: 7))..repeat(reverse: true);
+    _blob2 = AnimationController(vsync: this, duration: const Duration(seconds: 9))..repeat(reverse: true);
+    _blob3 = AnimationController(vsync: this, duration: const Duration(seconds: 5))..repeat(reverse: true);
 
-    // One-shot content entrance
-    _contentCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
+    // Content entrance (1.6 s)
+    _enter = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
 
-    _logoScale = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _contentCtrl,
-        curve: const Interval(0.0, 0.6, curve: Curves.elasticOut),
-      ),
-    );
-    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _contentCtrl,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
-      ),
-    );
-    _taglineFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _contentCtrl,
-        curve: const Interval(0.45, 0.7, curve: Curves.easeOut),
-      ),
-    );
-    _dotsOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _contentCtrl,
-        curve: const Interval(0.75, 1.0, curve: Curves.easeOut),
-      ),
-    );
+    _wordFade  = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _enter, curve: const Interval(0.0, 0.5, curve: Curves.easeOut)));
+    _wordSlide = Tween<double>(begin: 24, end: 0).animate(CurvedAnimation(parent: _enter, curve: const Interval(0.0, 0.5, curve: Curves.easeOutCubic)));
+    _tagFade   = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _enter, curve: const Interval(0.4, 0.75, curve: Curves.easeOut)));
+    _loaderFade= Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(parent: _enter, curve: const Interval(0.65, 1.0, curve: Curves.easeOut)));
 
-    _contentCtrl.forward();
+    // Loader ring
+    _loader = AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))..repeat();
 
-    Future.delayed(const Duration(milliseconds: 3400), () {
+    _enter.forward();
+
+    Future.delayed(const Duration(milliseconds: 3600), () {
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, __, ___) => const RoleRouter(),
-          transitionsBuilder: (_, anim, __, child) => FadeTransition(
-            opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
-            child: child,
-          ),
-          transitionDuration: const Duration(milliseconds: 700),
+      Navigator.of(context).pushReplacement(PageRouteBuilder(
+        pageBuilder: (_, __, ___) => const RoleRouter(),
+        transitionsBuilder: (_, anim, __, child) => FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOut),
+          child: child,
         ),
-      );
+        transitionDuration: const Duration(milliseconds: 800),
+      ));
     });
   }
 
   @override
   void dispose() {
-    _bgCtrl.dispose();
-    _contentCtrl.dispose();
+    _blob1.dispose(); _blob2.dispose(); _blob3.dispose();
+    _enter.dispose(); _loader.dispose();
     super.dispose();
   }
 
@@ -103,144 +86,137 @@ class _SplashScreenState extends State<SplashScreen>
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF060608),
+      backgroundColor: _bg,
       body: AnimatedBuilder(
-        animation: Listenable.merge([_bgCtrl, _contentCtrl]),
-        builder: (context, _) {
-          final t = _bgCtrl.value;
-
+        animation: Listenable.merge([_blob1, _blob2, _blob3, _enter, _loader]),
+        builder: (_, __) {
           return Stack(
             fit: StackFit.expand,
             children: [
-              // ── Animated glow background ────────────────────────────────────
-              CustomPaint(painter: _GlowPainter(t: t, size: size)),
 
-              // ── Fine grid overlay ───────────────────────────────────────────
-              CustomPaint(painter: _GridPainter()),
+              // ── Fluid mesh gradient background ──────────────────────────────
+              CustomPaint(
+                painter: _MeshPainter(
+                  t1: _blob1.value,
+                  t2: _blob2.value,
+                  t3: _blob3.value,
+                  size: size,
+                ),
+              ),
 
-              // ── Main content ────────────────────────────────────────────────
+              // ── Noise grain overlay ─────────────────────────────────────────
+              Opacity(
+                opacity: 0.03,
+                child: CustomPaint(painter: _GrainPainter(seed: (_loader.value * 60).toInt())),
+              ),
+
+              // ── Center content ──────────────────────────────────────────────
               Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo icon + wordmark
-                    FadeTransition(
-                      opacity: _logoFade,
-                      child: ScaleTransition(
-                        scale: _logoScale,
+
+                    // Wordmark — Bricolage Grotesque
+                    Transform.translate(
+                      offset: Offset(0, _wordSlide.value),
+                      child: Opacity(
+                        opacity: _wordFade.value,
                         child: Column(
                           children: [
-                            // Glowing icon tile
-                            AnimatedBuilder(
-                              animation: _bgCtrl,
-                              builder: (_, __) => Container(
-                                width: 84,
-                                height: 84,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [_emerald, _purple],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(26),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _emerald.withValues(alpha: 0.2 + 0.25 * t),
-                                      blurRadius: 24 + 16 * t,
-                                      spreadRadius: 2,
-                                    ),
-                                    BoxShadow(
-                                      color: _purple.withValues(alpha: 0.15 + 0.2 * (1 - t)),
-                                      blurRadius: 32,
-                                      offset: const Offset(8, 12),
-                                    ),
-                                  ],
+                            // Icon badge with glow
+                            Container(
+                              width: 72, height: 72,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [_green, _purple],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.volunteer_activism_rounded,
-                                    color: Colors.white,
-                                    size: 38,
+                                borderRadius: BorderRadius.circular(22),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _green.withValues(alpha: 0.35 + 0.2 * _blob1.value),
+                                    blurRadius: 28, spreadRadius: 2,
                                   ),
-                                ),
-                              ),
-                            ),
-
-                            const Gap(22),
-
-                            // AidBridge wordmark — Bricolage Grotesque
-                            RichText(
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: 'Aid',
-                                    style: GoogleFonts.bricolageGrotesque(
-                                      color: Colors.white,
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -2.5,
-                                      height: 1,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Bridge',
-                                    style: GoogleFonts.bricolageGrotesque(
-                                      color: _emerald,
-                                      fontSize: 48,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -2.5,
-                                      height: 1,
-                                    ),
+                                  BoxShadow(
+                                    color: _purple.withValues(alpha: 0.2 + 0.15 * _blob2.value),
+                                    blurRadius: 40, offset: const Offset(8, 14),
                                   ),
                                 ],
                               ),
+                              child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 34),
+                            ),
+
+                            const Gap(20),
+
+                            // AidBridge — Bricolage Grotesque w800
+                            RichText(
+                              text: TextSpan(children: [
+                                TextSpan(
+                                  text: 'Aid',
+                                  style: GoogleFonts.bricolageGrotesque(
+                                    color: Colors.white,
+                                    fontSize: 52,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -3,
+                                    height: 1,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'Bridge',
+                                  style: GoogleFonts.bricolageGrotesque(
+                                    color: _green,
+                                    fontSize: 52,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -3,
+                                    height: 1,
+                                  ),
+                                ),
+                              ]),
                             ),
                           ],
                         ),
                       ),
                     ),
 
-                    const Gap(16),
+                    const Gap(14),
 
-                    // Tagline
-                    FadeTransition(
-                      opacity: _taglineFade,
-                      child: const Text(
+                    // Tagline — Syne
+                    Opacity(
+                      opacity: _tagFade.value,
+                      child: Text(
                         'BRIDGE HEARTS · BUILD FUTURES',
-                        style: TextStyle(
-                          color: Color(0xFF5A5A70),
-                          fontSize: 11,
+                        style: GoogleFonts.syne(
+                          color: Colors.white.withValues(alpha: 0.35),
+                          fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 2.5,
+                          letterSpacing: 3,
                         ),
                       ),
                     ),
 
-                    const Gap(72),
+                    const Gap(64),
 
-                    // Pulse dots
-                    FadeTransition(
-                      opacity: _dotsOpacity,
-                      child: const _PulseDots(),
+                    // Loader — uiverse-inspired ring spinner
+                    Opacity(
+                      opacity: _loaderFade.value,
+                      child: _AidRingLoader(progress: _loader.value),
                     ),
                   ],
                 ),
               ),
 
-              // ── Bottom version label ─────────────────────────────────────────
+              // Bottom label
               Positioned(
-                bottom: 40,
-                left: 0,
-                right: 0,
-                child: FadeTransition(
-                  opacity: _dotsOpacity,
-                  child: const Text(
+                bottom: 36, left: 0, right: 0,
+                child: Opacity(
+                  opacity: _loaderFade.value,
+                  child: Text(
                     'Making a difference, one bridge at a time',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF3A3A50),
+                    style: GoogleFonts.spaceGrotesk(
+                      color: Colors.white.withValues(alpha: 0.22),
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -254,155 +230,163 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ─── Animated radial glow background ─────────────────────────────────────────
+// ─── Fluid mesh gradient painter ─────────────────────────────────────────────
 
-class _GlowPainter extends CustomPainter {
-  final double t;
+class _MeshPainter extends CustomPainter {
+  final double t1, t2, t3;
   final Size size;
-  const _GlowPainter({required this.t, required this.size});
+  const _MeshPainter({required this.t1, required this.t2, required this.t3, required this.size});
 
   @override
-  void paint(Canvas canvas, Size canvasSize) {
-    // Base dark fill
-    canvas.drawRect(
-      Offset.zero & canvasSize,
-      Paint()..color = const Color(0xFF060608),
-    );
+  void paint(Canvas canvas, Size s) {
+    final w = s.width, h = s.height;
 
-    // Emerald — top-left, pulses brighter
-    _drawGlow(
-      canvas,
-      center: Offset(size.width * 0.12, size.height * 0.22),
-      radius: size.width * 0.75,
+    // Blob 1 — emerald, top-left drifting
+    _drawBlob(canvas, s,
+      cx: w * (0.1 + 0.25 * t1),
+      cy: h * (0.1 + 0.2 * t1),
+      r: w * 0.55,
       color: const Color(0xFF1DB884),
-      opacity: 0.18 + 0.18 * t,
+      opacity: 0.18,
     );
 
-    // Purple — bottom-right, counter-pulse
-    _drawGlow(
-      canvas,
-      center: Offset(size.width * 0.88, size.height * 0.78),
-      radius: size.width * 0.7,
-      color: const Color(0xFF8B7FE8),
-      opacity: 0.16 + 0.16 * (1 - t),
+    // Blob 2 — purple, bottom-right drifting
+    _drawBlob(canvas, s,
+      cx: w * (0.75 - 0.2 * t2),
+      cy: h * (0.75 - 0.15 * t2),
+      r: w * 0.6,
+      color: const Color(0xFF1DB884),
+      opacity: 0.16,
     );
 
-    // Subtle amber mid-center
-    _drawGlow(
-      canvas,
-      center: Offset(size.width * 0.5, size.height * 0.5),
-      radius: size.width * 0.5,
+    // Blob 3 — coral accent, top-right small
+    _drawBlob(canvas, s,
+      cx: w * (0.85 + 0.1 * sin(t3 * pi)),
+      cy: h * (0.15 + 0.1 * cos(t3 * pi)),
+      r: w * 0.3,
       color: const Color(0xFFE8654A),
-      opacity: 0.04 + 0.04 * sin(t * pi),
+      opacity: 0.10,
+    );
+
+    // Blob 4 — blue accent, bottom-left
+    _drawBlob(canvas, s,
+      cx: w * (0.1 - 0.05 * t1),
+      cy: h * (0.8 + 0.1 * t2),
+      r: w * 0.35,
+      color: const Color(0xFF1DB884),
+      opacity: 0.12,
     );
   }
 
-  void _drawGlow(Canvas canvas, {
-    required Offset center,
-    required double radius,
-    required Color color,
-    required double opacity,
+  void _drawBlob(Canvas canvas, Size s, {
+    required double cx, required double cy,
+    required double r, required Color color, required double opacity,
   }) {
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = RadialGradient(
-          colors: [color.withValues(alpha: opacity), Colors.transparent],
-        ).createShader(Rect.fromCircle(center: center, radius: radius))
-        ..blendMode = BlendMode.screen,
-    );
+    final paint = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          color.withValues(alpha: opacity),
+          color.withValues(alpha: 0),
+        ],
+      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: r));
+    canvas.drawCircle(Offset(cx, cy), r, paint);
   }
 
   @override
-  bool shouldRepaint(_GlowPainter old) => old.t != t;
+  bool shouldRepaint(_MeshPainter old) =>
+      old.t1 != t1 || old.t2 != t2 || old.t3 != t3;
 }
 
-// ─── Subtle dot-grid overlay ──────────────────────────────────────────────────
+// ─── Grain texture painter ────────────────────────────────────────────────────
 
-class _GridPainter extends CustomPainter {
+class _GrainPainter extends CustomPainter {
+  final int seed;
+  const _GrainPainter({required this.seed});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF1E1E28)
-      ..strokeWidth = 1;
-
-    const spacing = 32.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      for (double y = 0; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1, paint);
-      }
+    final rng = Random(seed);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.6);
+    for (var i = 0; i < 800; i++) {
+      final x = rng.nextDouble() * size.width;
+      final y = rng.nextDouble() * size.height;
+      canvas.drawCircle(Offset(x, y), 0.4, paint);
     }
   }
 
   @override
-  bool shouldRepaint(_GridPainter old) => false;
+  bool shouldRepaint(_GrainPainter old) => old.seed != seed;
 }
 
-// ─── Animated loading dots ────────────────────────────────────────────────────
+// ─── Ring loader (uiverse-inspired) ──────────────────────────────────────────
 
-class _PulseDots extends StatefulWidget {
-  const _PulseDots();
-
-  @override
-  State<_PulseDots> createState() => _PulseDotsState();
-}
-
-class _PulseDotsState extends State<_PulseDots>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
+class _AidRingLoader extends StatelessWidget {
+  final double progress; // 0.0 → 1.0 looping
+  const _AidRingLoader({required this.progress});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _ctrl,
-      builder: (_, __) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (i) {
-            final phase = ((_ctrl.value * 3) - i).clamp(0.0, 1.0);
-            final wave  = sin(phase * pi).clamp(0.0, 1.0).toDouble();
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 5,
-              height: 5,
-              decoration: BoxDecoration(
-                color: Color.lerp(
-                  const Color(0xFF2A2A3A),
-                  const Color(0xFF1DB884),
-                  wave,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: wave > 0.5
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFF1DB884)
-                              .withValues(alpha: wave * 0.6),
-                          blurRadius: 6,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
-              ),
-            );
-          }),
-        );
-      },
+    return SizedBox(
+      width: 44, height: 44,
+      child: CustomPaint(painter: _RingPainter(progress: progress)),
     );
   }
+}
+
+class _RingPainter extends CustomPainter {
+  final double progress;
+  const _RingPainter({required this.progress});
+
+  static const _green  = Color(0xFF1DB884);
+  static const _purple = Color(0xFF1DB884);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r  = size.width / 2 - 4;
+
+    // Track ring
+    canvas.drawCircle(
+      Offset(cx, cy), r,
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.08)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+
+    // Animated arc — sweeps from 0 to ~270° and back using sine
+    final sweep = (0.3 + 0.7 * sin(progress * 2 * pi).abs()) * 2 * pi * 0.75;
+    final startAngle = progress * 2 * pi * 2; // rotates continuously
+
+    final shader = SweepGradient(
+      colors: [_purple, _green, _green],
+      startAngle: 0,
+      endAngle: sweep,
+    ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: r));
+
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy), radius: r),
+      startAngle - pi / 2,
+      sweep,
+      false,
+      Paint()
+        ..shader = shader
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round,
+    );
+
+    // Leading dot
+    final dotAngle = startAngle + sweep - pi / 2;
+    final dotX = cx + r * cos(dotAngle);
+    final dotY = cy + r * sin(dotAngle);
+    canvas.drawCircle(
+      Offset(dotX, dotY), 3,
+      Paint()..color = _green,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }

@@ -21,6 +21,9 @@ import 'impact_group_screen.dart';
 import '../../models/impact_group.dart';
 import '../common/welfare_resources_screen.dart';
 import '../common/contact_us_screen.dart';
+import '../common/theme_control_panel.dart';
+import '../../models/resident.dart';
+import 'resident_detail_screen.dart';
 
 class DonorDashboard extends StatefulWidget {
   const DonorDashboard({super.key});
@@ -44,7 +47,7 @@ class _DonorDashboardState extends State<DonorDashboard> {
     ];
 
     return Scaffold(
-      backgroundColor: AidColors.background,
+      backgroundColor: AidColors.donorBackground,
       body: pages[_selectedIndex],
       bottomNavigationBar: StreamBuilder<int>(
         stream: NotificationService.unreadCount(uid),
@@ -201,7 +204,7 @@ class _DonorMoreTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final uid = AuthService.instance.currentUser?.uid ?? '';
     return Scaffold(
-      backgroundColor: AidColors.background,
+      backgroundColor: AidColors.donorBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -257,10 +260,19 @@ class _DonorMoreTab extends StatelessWidget {
               ),
               const Gap(10),
               _Tile(
+                icon: Icons.palette_outlined,
+                title: 'Customise App',
+                subtitle: 'Change colours, background, style',
+                color: AidColors.donorAccent,
+                onTap: () => Navigator.push(context,
+                    aidRoute(const ThemeControlPanel())),
+              ),
+              const Gap(10),
+              _Tile(
                 icon: Icons.contact_support_outlined,
                 title: 'Contact Us',
                 subtitle: 'Get in touch, onboard your NGO',
-                color: const Color(0xFF4F46E5),
+                color: AidColors.donorAccent,
                 onTap: () => Navigator.push(context,
                     aidRoute(const ContactUsScreen())),
               ),
@@ -422,6 +434,7 @@ class _FeedTab extends StatelessWidget {
             const SliverToBoxAdapter(child: _ImpactGroupsRow()),
             // ── Partner NGOs (Manasa first + others) ─────────────────
             const SliverToBoxAdapter(child: _PartnerNgosRow()),
+            const SliverToBoxAdapter(child: _ResidentProfilesRow()),
 
             // ── Category filter chips (sticky) ───────────────────────
             SliverPersistentHeader(
@@ -829,7 +842,7 @@ class _PartnerNgosRow extends StatelessWidget {
       'desc': 'Old age home & medical welfare',
       'location': 'Bangalore',
       'url': 'https://www.manasamedicaltrust.org',
-      'color': 0xFF7C3AED,
+      'color': 0xFF9B4189,
       'icon': Icons.elderly_rounded,
       'featured': true,
     },
@@ -838,7 +851,7 @@ class _PartnerNgosRow extends StatelessWidget {
       'desc': 'Empowering older persons since 1978',
       'location': 'Pan India',
       'url': 'https://www.helpageindia.org',
-      'color': 0xFF1DB884,
+      'color': 0xFF9B4189,
       'icon': Icons.favorite_rounded,
       'featured': false,
     },
@@ -865,7 +878,7 @@ class _PartnerNgosRow extends StatelessWidget {
       'desc': 'Mid-day meal programme for children',
       'location': 'Pan India',
       'url': 'https://www.akshayapatra.org',
-      'color': 0xFF4F46E5,
+      'color': 0xFF9B4189,
       'icon': Icons.restaurant_rounded,
       'featured': false,
     },
@@ -1067,7 +1080,7 @@ class _ImpactStatsCard extends StatelessWidget {
                       _divider(),
                       _stat(_fmtQty(totalFulfilled), 'Items\nCollected', AidColors.volunteerAccent),
                       _divider(),
-                      _stat('$volunteerEvents', 'Volunteer\nEvents', const Color(0xFF4F46E5)),
+                      _stat('$volunteerEvents', 'Volunteer\nEvents', AidColors.donorAccent),
                     ],
                   ),
                 ],
@@ -1120,9 +1133,9 @@ class _ImpactGroupsRow extends StatelessWidget {
 
   static const _typeColors = {
     'children': Color(0xFFFF9800),
-    'elderly':  Color(0xFF7C3AED),
-    'women':    Color(0xFFE91E63),
-    'general':  Color(0xFF1DB884),
+    'elderly':  AidColors.donorAccent,
+    'women':    AidColors.donorAccent,
+    'general':  AidColors.donorAccent,
   };
 
   @override
@@ -1186,8 +1199,8 @@ class _ImpactGroupCard extends StatelessWidget {
   Color get _color {
     switch (group.type) {
       case ImpactGroupType.children: return const Color(0xFFFF9800);
-      case ImpactGroupType.elderly:  return const Color(0xFF7C3AED);
-      case ImpactGroupType.women:    return const Color(0xFFE91E63);
+      case ImpactGroupType.elderly:  return AidColors.donorAccent;
+      case ImpactGroupType.women:    return AidColors.donorAccent;
       case ImpactGroupType.general:  return AidColors.ngoAccent;
     }
   }
@@ -1277,10 +1290,10 @@ class _ServicesGrid extends StatelessWidget {
 
   static const _services = [
     {'icon': Icons.restaurant_rounded,     'label': 'Food',        'cat': 'food',           'color': 0xFFFF9800},
-    {'icon': Icons.local_hospital_rounded, 'label': 'Medical',     'cat': 'medical',         'color': 0xFFE91E63},
-    {'icon': Icons.checkroom_rounded,      'label': 'Clothes',     'cat': 'clothes',         'color': 0xFF2196F3},
+    {'icon': Icons.local_hospital_rounded, 'label': 'Medical',     'cat': 'medical',         'color': 0xFF9B4189},
+    {'icon': Icons.checkroom_rounded,      'label': 'Clothes',     'cat': 'clothes',         'color': 0xFF9B4189},
     {'icon': Icons.menu_book_rounded,      'label': 'Education',   'cat': 'education',       'color': 0xFF9C27B0},
-    {'icon': Icons.elderly_rounded,        'label': 'Old Age',     'cat': 'old age home',    'color': 0xFF7C3AED},
+    {'icon': Icons.elderly_rounded,        'label': 'Old Age',     'cat': 'old age home',    'color': 0xFF9B4189},
     {'icon': Icons.crisis_alert_rounded,   'label': 'Disaster',    'cat': 'disaster relief', 'color': 0xFF00BCD4},
     {'icon': Icons.child_care_rounded,     'label': 'Children',    'cat': 'children',        'color': 0xFFFF5722},
     {'icon': Icons.eco_rounded,            'label': 'Environment', 'cat': 'environment',     'color': 0xFF4CAF50},
@@ -1541,6 +1554,147 @@ class _EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Resident Profiles Row (donor feed) ────────────────────────────────────────
+
+class _ResidentProfilesRow extends StatelessWidget {
+  const _ResidentProfilesRow();
+
+  static const _urgencyColors = {
+    'normal':   Color(0xFF2B8CE6),
+    'urgent':   Color(0xFFF0A500),
+    'critical': Color(0xFFE8514A),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('residents')
+          .where('isActive', isEqualTo: true)
+          .limit(10)
+          .snapshots(),
+      builder: (context, snap) {
+        final residents = (snap.data?.docs ?? [])
+            .map((d) => Resident.fromDoc(d))
+            .toList();
+        if (residents.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Row(children: [
+                Text('People Who Need You',
+                  style: AidTextStyles.headingMd),
+                const Spacer(),
+                Text('${residents.length} profiles',
+                  style: AidTextStyles.caption.copyWith(
+                      color: AidColors.textMuted)),
+              ]),
+            ),
+            SizedBox(
+              height: 210,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: residents.length,
+                itemBuilder: (_, i) {
+                  final r = residents[i];
+                  final urgencyColor =
+                      _urgencyColors[r.urgency] ?? const Color(0xFF2B8CE6);
+                  return GestureDetector(
+                    onTap: () => Navigator.push(context, aidRoute(
+                        ResidentDetailScreen(resident: r))),
+                    child: Container(
+                      width: 140,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: AidColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AidColors.borderSubtle),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Photo
+                          ClipRRect(
+                            borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(16)),
+                            child: Stack(
+                              children: [
+                                r.photoUrl.isNotEmpty
+                                    ? Image.network(r.photoUrl,
+                                        height: 110, width: 140,
+                                        fit: BoxFit.cover)
+                                    : Container(
+                                        height: 110, width: 140,
+                                        color: AidColors.elevated,
+                                        child: const Icon(Icons.person_rounded,
+                                            size: 40,
+                                            color: AidColors.textMuted)),
+                                // Urgency dot
+                                Positioned(top: 8, right: 8,
+                                  child: Container(
+                                    width: 10, height: 10,
+                                    decoration: BoxDecoration(
+                                      color: urgencyColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: Colors.white, width: 1.5)),
+                                  )),
+                              ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(r.name,
+                                  style: AidTextStyles.labelMd,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                                const Gap(2),
+                                Text('${r.age} yrs · ${r.careHomeName}',
+                                  style: AidTextStyles.caption.copyWith(
+                                      color: AidColors.textMuted),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                                const Gap(6),
+                                if (r.needs.isNotEmpty)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AidColors.donorAccent
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(99),
+                                    ),
+                                    child: Text(r.needs.first,
+                                      style: GoogleFonts.spaceGrotesk(
+                                        color: AidColors.donorAccent,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600)),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const Gap(8),
+          ],
+        );
+      },
     );
   }
 }

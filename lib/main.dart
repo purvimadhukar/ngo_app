@@ -3,12 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/app_theme.dart';
+import 'services/theme_service.dart';
 import 'features/splash/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Full-bleed status bar
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -17,6 +17,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Load saved theme from Firestore before first frame
+  await ThemeService.load();
+
   runApp(const AidBridgeApp());
 }
 
@@ -25,19 +29,22 @@ class AidBridgeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AidBridge',
-      debugShowCheckedModeBanner: false,
-      theme: AidTheme.build(),
-      home: const SplashScreen(),
-      // ── Smooth slide+fade transition for every route push ──────────────────
-      onGenerateRoute: (settings) => _buildRoute(settings),
+    // ValueListenableBuilder rebuilds MaterialApp whenever ThemeService.save() is called
+    return ValueListenableBuilder<AppThemeConfig>(
+      valueListenable: ThemeService.config,
+      builder: (_, cfg, __) {
+        return MaterialApp(
+          title: 'AidBridge',
+          debugShowCheckedModeBanner: false,
+          theme: AidTheme.build(primaryColor: cfg.primaryColor),
+          home: const SplashScreen(),
+          onGenerateRoute: (settings) => _buildRoute(settings),
+        );
+      },
     );
   }
 
   static Route<dynamic> _buildRoute(RouteSettings settings) {
-    // Fallback — should never hit since we use Navigator.push directly,
-    // but this ensures any named route also gets the transition.
     return PageRouteBuilder(
       settings: settings,
       pageBuilder: (_, __, ___) => const SplashScreen(),

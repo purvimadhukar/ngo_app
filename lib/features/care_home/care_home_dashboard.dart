@@ -26,8 +26,8 @@ class _CareHomeDashboardState extends State<CareHomeDashboard>
   Map<String, dynamic> _profile = {};
   bool _loading = true;
 
-  static const _purple = Color(0xFF7C3AED);
-  static const _purpleLight = Color(0xFF9F67FF);
+  static const _purple = AidColors.ngoAccent;
+  static const _purpleLight = Color(0xFF2ECCA5);
 
   @override
   void initState() {
@@ -63,7 +63,7 @@ class _CareHomeDashboardState extends State<CareHomeDashboard>
     final centreName = _profile['orgName'] ?? _profile['name'] ?? 'Care Centre';
 
     return Scaffold(
-      backgroundColor: AidColors.background,
+      backgroundColor: AidColors.ngoBackground,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(
           context,
@@ -240,7 +240,7 @@ class _NeedsTab extends StatelessWidget {
   final String uid;
   const _NeedsTab({required this.uid});
 
-  static const _purple = Color(0xFF7C3AED);
+  static const _purple = AidColors.ngoAccent;
 
   @override
   Widget build(BuildContext context) {
@@ -252,7 +252,7 @@ class _NeedsTab extends StatelessWidget {
           .snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED)));
+          return const Center(child: CircularProgressIndicator(color: AidColors.ngoAccent));
         }
         final docs = snap.data?.docs ?? [];
         if (docs.isEmpty) {
@@ -277,7 +277,7 @@ class _NeedCard extends StatelessWidget {
   final QueryDocumentSnapshot doc;
   const _NeedCard({required this.doc});
 
-  static const _purple = Color(0xFF7C3AED);
+  static const _purple = AidColors.ngoAccent;
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +427,7 @@ class _ActivitiesTab extends StatefulWidget {
 }
 
 class _ActivitiesTabState extends State<_ActivitiesTab> {
-  static const _purple = Color(0xFF7C3AED);
+  static const _purple = AidColors.ngoAccent;
 
   void _showAddActivitySheet() {
     final titleCtrl = TextEditingController();
@@ -589,7 +589,7 @@ class _ActivityCard extends StatelessWidget {
   final String careHomeUid;
   const _ActivityCard({required this.doc, required this.careHomeUid});
 
-  static const _purple = Color(0xFF7C3AED);
+  static const _purple = AidColors.ngoAccent;
 
   @override
   Widget build(BuildContext context) {
@@ -757,10 +757,10 @@ class _DonationsTab extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                        backgroundColor: AidColors.ngoAccent.withValues(alpha: 0.15),
                         child: Text(
                           name.isNotEmpty ? name[0].toUpperCase() : '?',
-                          style: const TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.w700),
+                          style: const TextStyle(color: AidColors.ngoAccent, fontWeight: FontWeight.w700),
                         ),
                       ),
                       const Gap(12),

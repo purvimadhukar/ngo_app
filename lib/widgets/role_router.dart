@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gap/gap.dart';
 
+import '../core/app_theme.dart';
 import '../services/auth_service.dart';
 import '../features/auth/login_screen.dart';
 import '../features/ngo/ngo_dashboard.dart';
@@ -152,7 +153,7 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
                 child: ElevatedButton(
                   onPressed: _saving ? null : _save,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1DB884),
+                    backgroundColor: AidColors.donorAccent,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -181,10 +182,10 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF7C3AED).withValues(alpha: 0.1) : const Color(0xFF1A1A1F),
+          color: selected ? AidColors.donorAccent.withValues(alpha: 0.1) : const Color(0xFF1A1A1F),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? const Color(0xFF7C3AED) : const Color(0xFF2A2A30),
+            color: selected ? AidColors.donorAccent : const Color(0xFF2A2A30),
             width: selected ? 1.5 : 1,
           ),
         ),
@@ -201,7 +202,7 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
                 ],
               ),
             ),
-            if (selected) const Icon(Icons.check_circle_rounded, color: Color(0xFF7C3AED), size: 18),
+            if (selected) Icon(Icons.check_circle_rounded, color: AidColors.donorAccent, size: 18),
           ],
         ),
       ),
@@ -216,10 +217,10 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1DB884).withValues(alpha: 0.1) : const Color(0xFF141416),
+          color: selected ? AidColors.donorAccent.withValues(alpha: 0.1) : const Color(0xFF141416),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? const Color(0xFF1DB884) : const Color(0xFF222228),
+            color: selected ? AidColors.donorAccent : const Color(0xFF222228),
             width: selected ? 2 : 1,
           ),
         ),
@@ -236,7 +237,7 @@ class _RolePickerScaffoldState extends State<_RolePickerScaffold> {
                 ],
               ),
             ),
-            if (selected) const Icon(Icons.check_circle_rounded, color: Color(0xFF1DB884)),
+            if (selected) Icon(Icons.check_circle_rounded, color: AidColors.donorAccent),
           ],
         ),
       ),
@@ -252,7 +253,7 @@ class _LoadingScaffold extends StatelessWidget {
     return const Scaffold(
       backgroundColor: Color(0xFF0D0D0F),
       body: Center(
-        child: CircularProgressIndicator(color: Color(0xFF1DB884)),
+        child: CircularProgressIndicator(color: AidColors.ngoAccent),
       ),
     );
   }

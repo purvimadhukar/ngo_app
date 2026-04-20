@@ -420,7 +420,7 @@ class _DonationDetailScreenState extends State<DonationDetailScreen> {
             ),
             if (post.ngoVerified) ...[
               const Gap(4),
-              const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF4FC3F7)),
+              const Icon(Icons.verified_rounded, size: 14, color: Color(0xFF80FFD0)),
             ],
             const Spacer(),
             Text(

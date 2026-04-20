@@ -39,7 +39,7 @@ class _SignupScreenState extends State<SignupScreen>
     'donor': AidColors.donorAccent,
     'volunteer': AidColors.volunteerAccent,
     'ngo': AidColors.ngoAccent,
-    'careHome': Color(0xFF7C3AED),
+    'careHome': AidColors.ngoAccent,
   };
 
   Color get _accent => _roleColors[_role] ?? AidColors.ngoAccent;
@@ -225,7 +225,7 @@ class _SignupScreenState extends State<SignupScreen>
                   label: 'Welfare Home',
                   subtitle: 'Old age home, shelter, care centre',
                   selected: _role == 'careHome',
-                  color: const Color(0xFF7C3AED),
+                  color: AidColors.donorAccent,
                   onTap: () => setState(() => _role = 'careHome'),
                 ),
               ],

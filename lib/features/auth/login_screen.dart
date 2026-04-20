@@ -1,401 +1,341 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:gap/gap.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/auth_service.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen>
-    with SingleTickerProviderStateMixin {
-  // ── Controllers ─────────────────────────────────────────────────────────────
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+    with TickerProviderStateMixin {
+  final _emailCtrl    = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _formKey      = GlobalKey<FormState>();
 
-  // ── State ───────────────────────────────────────────────────────────────────
-  bool _obscurePassword = true;
-  bool _isLoading = false;
-  String? _errorMessage;
+  bool _obscure   = true;
+  bool _loading   = false;
+  String? _error;
 
-  // ── Animation ───────────────────────────────────────────────────────────────
-  late final AnimationController _fadeController;
-  late final Animation<double> _fadeAnimation;
+  late final AnimationController _blob1;
+  late final AnimationController _blob2;
+  late final AnimationController _blob3;
+  late final AnimationController _enter;
+  late final Animation<double> _cardSlide;
+  late final Animation<double> _cardFade;
 
-  // ── Palette ──────────────────────────────────────────────────────────────────
-  static const _bg = Color(0xFF0D0D0F);
-  static const _green = Color(0xFF1DB884);
-  static const _textPrimary = Color(0xFFF2F2F3);
-  static const _textMuted = Color(0xFF9A9AA8);
-  static const _surface = Color(0xFF17171A);
+  static const _bg     = Color(0xFF05070A);
+  static const _green  = Color(0xFF24A3BE);   // teal/cyan — login theme
+  static const _coral  = Color(0xFFE8654A);
+  static const _surface = Color(0xFF111115);
+  static const _border  = Color(0xFF1E1E26);
+  static const _textPrimary = Color(0xFFF0F0F4);
+  static const _textMuted   = Color(0xFF6B6B7A);
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    )..forward();
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
+    _blob1 = AnimationController(vsync: this, duration: const Duration(seconds: 8))..repeat(reverse: true);
+    _blob2 = AnimationController(vsync: this, duration: const Duration(seconds: 11))..repeat(reverse: true);
+    _blob3 = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat(reverse: true);
+
+    _enter = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..forward();
+    _cardSlide = Tween<double>(begin: 32, end: 0).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
+    _cardFade  = CurvedAnimation(parent: _enter, curve: Curves.easeOut);
   }
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    _fadeController.dispose();
+    _emailCtrl.dispose(); _passwordCtrl.dispose();
+    _blob1.dispose(); _blob2.dispose(); _blob3.dispose();
+    _enter.dispose();
     super.dispose();
   }
 
-  // ── Actions ──────────────────────────────────────────────────────────────────
-
   Future<void> _signIn() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
+    setState(() { _loading = true; _error = null; });
     try {
       await AuthService.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text,
       );
-      // RoleRouter will automatically navigate once auth state changes.
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorMessage = _friendlyError(e.code));
-    } catch (e) {
-      setState(() => _errorMessage = 'An unexpected error occurred.');
+      setState(() => _error = _friendly(e.code));
+    } catch (_) {
+      setState(() => _error = 'Something went wrong. Try again.');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _showForgotPassword() async {
-    final emailController = TextEditingController(
-      text: _emailController.text.trim(),
-    );
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: _surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => _ForgotPasswordSheet(
-        emailController: emailController,
-      ),
-    );
-  }
-
-  String _friendlyError(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No account found with that email.';
-      case 'wrong-password':
-      case 'invalid-credential':
-        return 'Incorrect email or password.';
-      case 'invalid-email':
-        return 'Please enter a valid email address.';
-      case 'user-disabled':
-        return 'This account has been disabled.';
-      case 'too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      default:
-        return 'Sign-in failed. Please try again.';
-    }
-  }
-
-  // ── Build ────────────────────────────────────────────────────────────────────
+  String _friendly(String code) => switch (code) {
+    'user-not-found'    => 'No account found with that email.',
+    'wrong-password'    => 'Incorrect password.',
+    'invalid-credential'=> 'Incorrect email or password.',
+    'invalid-email'     => 'Enter a valid email address.',
+    'user-disabled'     => 'This account has been disabled.',
+    'too-many-requests' => 'Too many attempts. Try again later.',
+    _                   => 'Sign-in failed. Please try again.',
+  };
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       backgroundColor: _bg,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 40),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Logo + heading ──────────────────────────────────────
-                    _buildHeader(),
-                    const SizedBox(height: 40),
+      body: AnimatedBuilder(
+        animation: Listenable.merge([_blob1, _blob2, _blob3, _enter]),
+        builder: (_, __) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
 
-                    // ── Form ────────────────────────────────────────────────
-                    Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          _buildEmailField(),
-                          const SizedBox(height: 16),
-                          _buildPasswordField(),
-                          const SizedBox(height: 10),
-                          _buildForgotPassword(),
-                          const SizedBox(height: 28),
+              // ── Fluid mesh background (same as splash) ──────────────────────
+              CustomPaint(painter: _LoginMeshPainter(
+                t1: _blob1.value, t2: _blob2.value, t3: _blob3.value,
+              )),
 
-                          // ── Error banner ──────────────────────────────────
-                          if (_errorMessage != null) ...[
-                            _buildErrorBanner(),
-                            const SizedBox(height: 16),
+              // ── Centered card ───────────────────────────────────────────────
+              Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                  child: Transform.translate(
+                    offset: Offset(0, _cardSlide.value),
+                    child: FadeTransition(
+                      opacity: _cardFade,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            // ── Header ────────────────────────────────────────
+                            _buildHeader(),
+                            const Gap(36),
+
+                            // ── Glassmorphism card ────────────────────────────
+                            Container(
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: _surface.withValues(alpha: 0.85),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: _border),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    blurRadius: 40, offset: const Offset(0, 16),
+                                  ),
+                                ],
+                              ),
+                              child: Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildField(
+                                      ctrl: _emailCtrl,
+                                      label: 'Email address',
+                                      hint: 'you@example.com',
+                                      icon: Icons.mail_outline_rounded,
+                                      keyboardType: TextInputType.emailAddress,
+                                      validator: (v) {
+                                        if (v == null || v.trim().isEmpty) return 'Email is required';
+                                        if (!v.contains('@')) return 'Enter a valid email';
+                                        return null;
+                                      },
+                                    ),
+                                    const Gap(20),
+                                    _buildField(
+                                      ctrl: _passwordCtrl,
+                                      label: 'Password',
+                                      hint: '••••••••',
+                                      icon: Icons.lock_outline_rounded,
+                                      obscure: _obscure,
+                                      suffix: GestureDetector(
+                                        onTap: () => setState(() => _obscure = !_obscure),
+                                        child: Icon(
+                                          _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                          color: _textMuted, size: 18,
+                                        ),
+                                      ),
+                                      validator: (v) {
+                                        if (v == null || v.isEmpty) return 'Password is required';
+                                        if (v.length < 6) return 'At least 6 characters';
+                                        return null;
+                                      },
+                                    ),
+
+                                    // Forgot password
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: _showForgotPassword,
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: _green,
+                                          padding: const EdgeInsets.only(top: 8),
+                                          minimumSize: Size.zero,
+                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        ),
+                                        child: Text('Forgot password?',
+                                            style: GoogleFonts.spaceGrotesk(fontSize: 12, fontWeight: FontWeight.w500)),
+                                      ),
+                                    ),
+
+                                    const Gap(8),
+
+                                    // Error
+                                    if (_error != null) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: _coral.withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: Border.all(color: _coral.withValues(alpha: 0.25)),
+                                        ),
+                                        child: Row(children: [
+                                          const Icon(Icons.info_outline_rounded, color: _coral, size: 16),
+                                          const Gap(10),
+                                          Expanded(child: Text(_error!,
+                                              style: GoogleFonts.spaceGrotesk(color: _coral, fontSize: 13))),
+                                        ]),
+                                      ),
+                                      const Gap(16),
+                                    ],
+
+                                    // Sign in button
+                                    _buildSignInButton(),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            const Gap(16),
+
+                            // DEV quick login
+                            _buildDevBar(),
+
+                            const Gap(24),
+
+                            // Sign up link
+                            Center(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.spaceGrotesk(color: _textMuted, fontSize: 13),
+                                  children: [
+                                    const TextSpan(text: "Don't have an account?  "),
+                                    WidgetSpan(
+                                      child: GestureDetector(
+                                        onTap: () => Navigator.push(context,
+                                            MaterialPageRoute(builder: (_) => const SignupScreen())),
+                                        child: Text('Sign up',
+                                          style: GoogleFonts.spaceGrotesk(
+                                            color: _green, fontSize: 13, fontWeight: FontWeight.w700,
+                                          )),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
-
-                          // ── Sign-in button ────────────────────────────────
-                          _buildSignInButton(),
-                          _buildDevBar(),
-                          const SizedBox(height: 20),
-
-                          // ── Sign-up link ──────────────────────────────────
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Don't have an account? ",
-                                style: TextStyle(color: _textMuted, fontSize: 13),
-                              ),
-                              GestureDetector(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SignupScreen(),
-                                  ),
-                                ),
-                                child: const Text(
-                                  'Sign up',
-                                  style: TextStyle(
-                                    color: _green,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
-        ),
+            ],
+          );
+        },
       ),
     );
   }
-
-  // ── Sub-widgets ──────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Gradient icon badge — matches splash
+        // Badge
         Container(
-          width: 56,
-          height: 56,
+          width: 52, height: 52,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1DB884), Color(0xFF8B7FE8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
+            color: _green,
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF1DB884).withValues(alpha: 0.35),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-              ),
+              BoxShadow(color: _green.withValues(alpha: 0.35), blurRadius: 20, offset: const Offset(0, 6)),
             ],
           ),
-          child: const Icon(
-            Icons.volunteer_activism_rounded,
-            color: Colors.white,
-            size: 28,
+          child: const Icon(Icons.volunteer_activism_rounded, color: Colors.white, size: 26),
+        ),
+        const Gap(20),
+        Text(
+          'AidBridge',
+          style: GoogleFonts.bricolageGrotesque(
+            color: _textPrimary,
+            fontSize: 36,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1.5,
+            height: 1,
           ),
         ),
-        const SizedBox(height: 24),
-        RichText(
-          text: const TextSpan(
-            children: [
-              TextSpan(
-                text: 'Aid',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
-                  height: 1,
-                ),
-              ),
-              TextSpan(
-                text: 'Bridge',
-                style: TextStyle(
-                  color: Color(0xFF1DB884),
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Text(
+        const Gap(6),
+        Text(
           'Sign in to continue making a difference',
-          style: TextStyle(
-            color: _textMuted,
-            fontSize: 14,
-          ),
+          style: GoogleFonts.spaceGrotesk(color: _textMuted, fontSize: 14),
         ),
       ],
     );
   }
 
-  Widget _buildEmailField() {
-    return _AidTextField(
-      controller: _emailController,
-      label: 'Email',
-      hint: 'you@example.com',
-      keyboardType: TextInputType.emailAddress,
-      prefixIcon: Icons.mail_outline_rounded,
-      validator: (v) {
-        if (v == null || v.trim().isEmpty) return 'Email is required.';
-        if (!v.contains('@')) return 'Enter a valid email.';
-        return null;
-      },
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return _AidTextField(
-      controller: _passwordController,
-      label: 'Password',
-      hint: '••••••••',
-      obscureText: _obscurePassword,
-      prefixIcon: Icons.lock_outline_rounded,
-      suffixIcon: IconButton(
-        icon: Icon(
-          _obscurePassword
-              ? Icons.visibility_off_outlined
-              : Icons.visibility_outlined,
-          color: _textMuted,
-          size: 20,
-        ),
-        onPressed: () =>
-            setState(() => _obscurePassword = !_obscurePassword),
-      ),
-      validator: (v) {
-        if (v == null || v.isEmpty) return 'Password is required.';
-        if (v.length < 6) return 'Password must be at least 6 characters.';
-        return null;
-      },
-    );
-  }
-
-  Widget _buildForgotPassword() {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton(
-        onPressed: _showForgotPassword,
-        style: TextButton.styleFrom(
-          foregroundColor: _green,
-          padding: EdgeInsets.zero,
-          minimumSize: Size.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        child: const Text(
-          'Forgot password?',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE05454).withValues(alpha:0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE05454).withValues(alpha:0.3)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline_rounded,
-              color: Color(0xFFE05454), size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _errorMessage!,
-              style: const TextStyle(color: Color(0xFFE05454), fontSize: 13),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ── DEV quick-login accounts (remove before going live) ──────────────────────
-  static const _devAccounts = [
-    {'label': '💚 NGO', 'email': 'majorprojectclaude@gmail.com', 'pass': 'purvi123'},
-  ];
-
-  Widget _buildDevBar() {
+  Widget _buildField({
+    required TextEditingController ctrl,
+    required String label,
+    required String hint,
+    required IconData icon,
+    bool obscure = false,
+    Widget? suffix,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            const Expanded(child: Divider(color: Color(0xFF222228))),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Text('DEV QUICK LOGIN',
-                  style: TextStyle(color: Colors.grey.shade700, fontSize: 10, letterSpacing: 0.8)),
-            ),
-            const Expanded(child: Divider(color: Color(0xFF222228))),
-          ],
+        Text(label,
+          style: GoogleFonts.spaceGrotesk(
+            color: _textMuted, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.3,
+          )),
+        const Gap(8),
+        TextFormField(
+          controller: ctrl,
+          obscureText: obscure,
+          keyboardType: keyboardType,
+          style: GoogleFonts.spaceGrotesk(color: _textPrimary, fontSize: 15),
+          validator: validator,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: GoogleFonts.spaceGrotesk(color: _textMuted.withValues(alpha: 0.6), fontSize: 15),
+            prefixIcon: Icon(icon, color: _textMuted, size: 18),
+            suffixIcon: suffix != null ? Padding(padding: const EdgeInsets.only(right: 14), child: suffix) : null,
+            suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.04),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _green, width: 1.5)),
+            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: _coral.withValues(alpha: 0.7))),
+            focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: _coral, width: 1.5)),
+            errorStyle: GoogleFonts.spaceGrotesk(color: _coral, fontSize: 12),
+          ),
         ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _devAccounts.map((a) {
-            return GestureDetector(
-              onTap: () async {
-                _emailController.text = a['email']!;
-                _passwordController.text = a['pass']!;
-                await _signIn();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF17171A),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF2A2A32)),
-                ),
-                child: Text(a['label']!, style: const TextStyle(color: Colors.white70, fontSize: 13)),
-              ),
-            );
-          }).toList(),
-        ),
-        const SizedBox(height: 4),
       ],
     );
   }
@@ -404,159 +344,216 @@ class _LoginScreenState extends State<LoginScreen>
     return SizedBox(
       width: double.infinity,
       height: 52,
-      child: FilledButton(
-        onPressed: _isLoading ? null : _signIn,
-        style: FilledButton.styleFrom(
-          backgroundColor: _green,
-          disabledBackgroundColor: _green.withValues(alpha:0.5),
-          foregroundColor: Colors.black,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: _loading
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [_green, Color(0xFF16A373)]),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Center(
+                child: SizedBox(width: 22, height: 22,
+                  child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5)),
+              ),
+            )
+          : _GradientButton(
+              onTap: _signIn,
+              label: 'Sign in',
+            ),
+    );
+  }
+
+  static const _devAccounts = [
+    {'label': 'NGO', 'email': 'majorprojectclaude@gmail.com', 'pass': 'purvi123'},
+  ];
+
+  Widget _buildDevBar() {
+    return Column(
+      children: [
+        Row(children: [
+          const Expanded(child: Divider(color: Color(0xFF1A1A22))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text('DEV QUICK LOGIN',
+              style: GoogleFonts.spaceGrotesk(color: const Color(0xFF3A3A4A), fontSize: 10, letterSpacing: 1)),
+          ),
+          const Expanded(child: Divider(color: Color(0xFF1A1A22))),
+        ]),
+        const Gap(12),
+        Wrap(
+          spacing: 8,
+          children: _devAccounts.map((a) => GestureDetector(
+            onTap: () async {
+              _emailCtrl.text = a['email']!;
+              _passwordCtrl.text = a['pass']!;
+              await _signIn();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: const Color(0xFF1E1E26)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 6, height: 6,
+                  decoration: const BoxDecoration(color: _green, shape: BoxShape.circle)),
+                const Gap(7),
+                Text(a['label']!,
+                  style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          )).toList(),
         ),
-        child: _isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  color: Colors.black,
-                  strokeWidth: 2.5,
-                ),
-              )
-            : const Text(
-                'Sign in',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
+      ],
+    );
+  }
+
+  Future<void> _showForgotPassword() async {
+    final ctrl = TextEditingController(text: _emailCtrl.text.trim());
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: _surface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _ForgotSheet(ctrl: ctrl),
+    );
+  }
+}
+
+// ─── Gradient CTA button ──────────────────────────────────────────────────────
+
+class _GradientButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final String label;
+  const _GradientButton({required this.onTap, required this.label});
+  @override State<_GradientButton> createState() => _GradientButtonState();
+}
+
+class _GradientButtonState extends State<_GradientButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  bool _hovered = false;
+
+  // Teal — login theme
+  static const _btnColor  = Color(0xFF24A3BE);
+  static const _glowColor = Color(0xFF1A8BA8);
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 100));
+    _scale = Tween<double>(begin: 1.0, end: 0.97)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+  }
+
+  @override void dispose() { _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit:  (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => _ctrl.forward(),
+        onTapUp:   (_) { _ctrl.reverse(); widget.onTap(); },
+        onTapCancel: () => _ctrl.reverse(),
+        child: AnimatedBuilder(
+          animation: _scale,
+          builder: (_, __) => Transform.scale(
+            scale: _scale.value,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 400),
+              decoration: BoxDecoration(
+                color: _btnColor,
+                borderRadius: BorderRadius.circular(9),
+                // Green glow on hover
+                boxShadow: _hovered
+                    ? [BoxShadow(
+                        color: _glowColor.withValues(alpha: 0.85),
+                        blurRadius: 56,
+                        spreadRadius: -14,
+                        offset: const Offset(7, 5),
+                      )]
+                    : [],
+              ),
+              child: Center(
+                child: Text(
+                  widget.label,
+                  style: GoogleFonts.syne(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.2,
+                  ),
                 ),
               ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-// ── Reusable text field ───────────────────────────────────────────────────────
+// ─── Login mesh background ────────────────────────────────────────────────────
 
-class _AidTextField extends StatelessWidget {
-  const _AidTextField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.prefixIcon,
-    this.keyboardType,
-    this.obscureText = false,
-    this.suffixIcon,
-    this.validator,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final IconData prefixIcon;
-  final TextInputType? keyboardType;
-  final bool obscureText;
-  final Widget? suffixIcon;
-  final String? Function(String?)? validator;
-
-  static const _surface = Color(0xFF17171A);
-  static const _border = Color(0xFF2A2A30);
-  static const _green = Color(0xFF1DB884);
-  static const _textPrimary = Color(0xFFF2F2F3);
-  static const _textMuted = Color(0xFF9A9AA8);
+class _LoginMeshPainter extends CustomPainter {
+  final double t1, t2, t3;
+  const _LoginMeshPainter({required this.t1, required this.t2, required this.t3});
 
   @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: _textMuted,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.2,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          style: const TextStyle(color: _textPrimary, fontSize: 15),
-          validator: validator,
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: _textMuted, fontSize: 15),
-            prefixIcon:
-                Icon(prefixIcon, color: _textMuted, size: 19),
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: _surface,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: _green, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE05454)),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: Color(0xFFE05454), width: 1.5),
-            ),
-            errorStyle: const TextStyle(color: Color(0xFFE05454)),
-          ),
-        ),
-      ],
-    );
+  void paint(Canvas canvas, Size s) {
+    // Teal/cyan blobs — login theme (dark red-black → teal gradient)
+    _blob(canvas, s, cx: s.width * (0.1 + 0.15 * t1), cy: s.height * (0.15 + 0.12 * t1),
+        r: s.width * 0.55, color: const Color(0xFF0F0202), opacity: 0.60); // dark warmth
+    _blob(canvas, s, cx: s.width * (0.75 - 0.15 * t2), cy: s.height * (0.65 - 0.1 * t2),
+        r: s.width * 0.65, color: const Color(0xFF24A3BE), opacity: 0.20); // teal glow
+    _blob(canvas, s, cx: s.width * (0.85 + 0.08 * sin(t3 * pi)), cy: s.height * (0.12 + 0.06 * t1),
+        r: s.width * 0.35, color: const Color(0xFF1A8BA8), opacity: 0.14); // mid teal
+    _blob(canvas, s, cx: s.width * (0.2 - 0.08 * t3), cy: s.height * (0.78 + 0.08 * t2),
+        r: s.width * 0.3, color: const Color(0xFF24A3BE), opacity: 0.10); // bottom teal
   }
-}
 
-// ── Forgot Password bottom sheet ──────────────────────────────────────────────
-
-class _ForgotPasswordSheet extends StatefulWidget {
-  const _ForgotPasswordSheet({required this.emailController});
-  final TextEditingController emailController;
+  void _blob(Canvas c, Size s, {required double cx, required double cy,
+      required double r, required Color color, required double opacity}) {
+    c.drawCircle(Offset(cx, cy), r, Paint()
+      ..shader = RadialGradient(
+        colors: [color.withValues(alpha: opacity), color.withValues(alpha: 0)],
+      ).createShader(Rect.fromCircle(center: Offset(cx, cy), radius: r)));
+  }
 
   @override
-  State<_ForgotPasswordSheet> createState() => _ForgotPasswordSheetState();
+  bool shouldRepaint(_LoginMeshPainter o) => o.t1 != t1 || o.t2 != t2 || o.t3 != t3;
 }
 
-class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
-  bool _sent = false;
-  bool _sending = false;
+// ─── Forgot password sheet ────────────────────────────────────────────────────
+
+class _ForgotSheet extends StatefulWidget {
+  final TextEditingController ctrl;
+  const _ForgotSheet({required this.ctrl});
+  @override State<_ForgotSheet> createState() => _ForgotSheetState();
+}
+
+class _ForgotSheetState extends State<_ForgotSheet> {
+  bool _sent = false, _sending = false;
   String? _error;
 
   static const _green = Color(0xFF1DB884);
-  static const _textPrimary = Color(0xFFF2F2F3);
-  static const _textMuted = Color(0xFF9A9AA8);
-  static const _border = Color(0xFF2A2A30);
+  static const _textPrimary = Color(0xFFF0F0F4);
+  static const _textMuted   = Color(0xFF6B6B7A);
+  static const _coral = Color(0xFFE8654A);
 
-  Future<void> _sendReset() async {
-    final email = widget.emailController.text.trim();
+  Future<void> _send() async {
+    final email = widget.ctrl.text.trim();
     if (email.isEmpty || !email.contains('@')) {
-      setState(() => _error = 'Enter a valid email address.');
-      return;
+      setState(() => _error = 'Enter a valid email address.'); return;
     }
-    setState(() {
-      _sending = true;
-      _error = null;
-    });
+    setState(() { _sending = true; _error = null; });
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      setState(() => _sent = true);
+      if (mounted) setState(() => _sent = true);
     } on FirebaseAuthException catch (e) {
       setState(() => _error = e.message ?? 'Something went wrong.');
     } finally {
@@ -567,142 +564,65 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        24,
-        24,
-        MediaQuery.of(context).viewInsets.bottom + 32,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: _border,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Center(child: Container(width: 36, height: 4,
+            decoration: BoxDecoration(color: const Color(0xFF2A2A32), borderRadius: BorderRadius.circular(2)))),
+        const Gap(24),
+        if (_sent) ...[
+          const Center(child: Icon(Icons.mark_email_read_outlined, color: _green, size: 48)),
+          const Gap(16),
+          Center(child: Text('Check your inbox',
+              style: GoogleFonts.syne(color: _textPrimary, fontSize: 20, fontWeight: FontWeight.w700))),
+          const Gap(8),
+          Center(child: Text('Reset link sent to ${widget.ctrl.text.trim()}',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.spaceGrotesk(color: _textMuted, fontSize: 14))),
+          const Gap(28),
+          SizedBox(width: double.infinity, height: 48,
+            child: FilledButton(
+              onPressed: () => Navigator.pop(context),
+              style: FilledButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: Text('Done', style: GoogleFonts.syne(fontWeight: FontWeight.w700)),
+            )),
+        ] else ...[
+          Text('Reset password', style: GoogleFonts.syne(color: _textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+          const Gap(6),
+          Text("We'll send a reset link to your email.",
+              style: GoogleFonts.spaceGrotesk(color: _textMuted, fontSize: 14)),
+          const Gap(24),
+          TextFormField(
+            controller: widget.ctrl,
+            keyboardType: TextInputType.emailAddress,
+            style: GoogleFonts.spaceGrotesk(color: _textPrimary),
+            decoration: InputDecoration(
+              hintText: 'you@example.com',
+              hintStyle: GoogleFonts.spaceGrotesk(color: _textMuted),
+              prefixIcon: const Icon(Icons.mail_outline_rounded, color: _textMuted, size: 18),
+              filled: true, fillColor: const Color(0xFF0D0D0F),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2A2A30))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF2A2A30))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _green, width: 1.5)),
+              errorText: _error,
+              errorStyle: GoogleFonts.spaceGrotesk(color: _coral, fontSize: 12),
             ),
           ),
-          const SizedBox(height: 24),
-
-          if (_sent) ...[
-            // ── Success state ───────────────────────────────────────────────
-            const Center(
-              child: Icon(Icons.mark_email_read_outlined,
-                  color: _green, size: 48),
-            ),
-            const SizedBox(height: 16),
-            const Center(
-              child: Text(
-                'Check your inbox',
-                style: TextStyle(
-                  color: _textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'A reset link has been sent to\n${widget.emailController.text.trim()}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: _textMuted, fontSize: 14),
-              ),
-            ),
-            const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: _green,
+          const Gap(20),
+          SizedBox(width: double.infinity, height: 50,
+            child: FilledButton(
+              onPressed: _sending ? null : _send,
+              style: FilledButton.styleFrom(backgroundColor: _green,
+                  disabledBackgroundColor: _green.withValues(alpha: 0.5),
                   foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Done',
-                    style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ] else ...[
-            // ── Input state ─────────────────────────────────────────────────
-            const Text(
-              'Reset password',
-              style: TextStyle(
-                color: _textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              "We'll send a reset link to your email.",
-              style: TextStyle(color: _textMuted, fontSize: 14),
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: widget.emailController,
-              keyboardType: TextInputType.emailAddress,
-              style: const TextStyle(color: _textPrimary),
-              decoration: InputDecoration(
-                hintText: 'you@example.com',
-                hintStyle: const TextStyle(color: _textMuted),
-                prefixIcon: const Icon(Icons.mail_outline_rounded,
-                    color: _textMuted, size: 19),
-                filled: true,
-                fillColor: const Color(0xFF0D0D0F),
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _border),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _border),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: _green, width: 1.5),
-                ),
-                errorText: _error,
-                errorStyle: const TextStyle(color: Color(0xFFE05454)),
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: FilledButton(
-                onPressed: _sending ? null : _sendReset,
-                style: FilledButton.styleFrom(
-                  backgroundColor: _green,
-                  disabledBackgroundColor: _green.withValues(alpha:0.5),
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _sending
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.black, strokeWidth: 2.5),
-                      )
-                    : const Text('Send reset link',
-                        style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ),
-          ],
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: _sending
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
+                  : Text('Send reset link', style: GoogleFonts.syne(fontWeight: FontWeight.w700)),
+            )),
         ],
-      ),
+      ]),
     );
   }
 }

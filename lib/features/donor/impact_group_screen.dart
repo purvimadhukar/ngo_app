@@ -23,8 +23,8 @@ class _ImpactGroupScreenState extends State<ImpactGroupScreen> {
   Color get _typeColor {
     switch (widget.group.type) {
       case ImpactGroupType.children: return const Color(0xFFFF9800);
-      case ImpactGroupType.elderly:  return const Color(0xFF7C3AED);
-      case ImpactGroupType.women:    return const Color(0xFFE91E63);
+      case ImpactGroupType.elderly:  return AidColors.donorAccent;
+      case ImpactGroupType.women:    return AidColors.donorAccent;
       case ImpactGroupType.general:  return AidColors.ngoAccent;
     }
   }

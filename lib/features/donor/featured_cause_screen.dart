@@ -147,7 +147,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color(0xFF1a1060), Color(0xFF7C3AED), Color(0xFF4F46E5)],
+                        colors: [Color(0xFF011A0F), AidColors.donorAccent, AidColors.donorAccent],
                       ),
                     ),
                   ),
@@ -280,12 +280,12 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF7C3AED).withValues(alpha: 0.12),
-            const Color(0xFF4F46E5).withValues(alpha: 0.06),
+            AidColors.donorAccent.withValues(alpha: 0.12),
+            AidColors.donorAccent.withValues(alpha: 0.06),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.25)),
+        border: Border.all(color: AidColors.donorAccent.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -295,7 +295,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
             children: [
               Text(
                 '₹${_formatMoney(raised)}',
-                style: AidTextStyles.displaySm.copyWith(color: const Color(0xFF7C3AED)),
+                style: AidTextStyles.displaySm.copyWith(color: AidColors.donorAccent),
               ),
               const Gap(6),
               Padding(
@@ -326,7 +326,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
                   height: 10,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
+                      colors: [AidColors.donorAccent, AidColors.donorAccent],
                     ),
                     borderRadius: BorderRadius.circular(5),
                   ),
@@ -340,7 +340,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
               Text(
                 '$pct% funded',
                 style: AidTextStyles.labelMd.copyWith(
-                  color: const Color(0xFF7C3AED),
+                  color: AidColors.donorAccent,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -477,13 +477,13 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                    color: AidColors.donorAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     need['cost']?.toString() ?? '',
                     style: AidTextStyles.labelSm.copyWith(
-                      color: const Color(0xFF7C3AED),
+                      color: AidColors.donorAccent,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -520,12 +520,12 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
                     color: selected
-                        ? const Color(0xFF7C3AED)
+                        ? AidColors.donorAccent
                         : AidColors.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: selected
-                          ? const Color(0xFF7C3AED)
+                          ? AidColors.donorAccent
                           : AidColors.borderDefault,
                     ),
                   ),
@@ -575,12 +575,12 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF7C3AED).withValues(alpha: 0.12),
+            AidColors.donorAccent.withValues(alpha: 0.12),
             AidColors.ngoAccent.withValues(alpha: 0.08),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+        border: Border.all(color: AidColors.donorAccent.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -588,7 +588,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
           const Gap(12),
           Text(
             'Thank you!',
-            style: AidTextStyles.displaySm.copyWith(color: const Color(0xFF7C3AED)),
+            style: AidTextStyles.displaySm.copyWith(color: AidColors.donorAccent),
           ),
           const Gap(6),
           Text(
@@ -600,12 +600,12 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.stars_rounded, color: Color(0xFF7C3AED), size: 18),
+              const Icon(Icons.stars_rounded, color: AidColors.donorAccent, size: 18),
               const Gap(6),
               Text(
                 '+20 reward points earned',
                 style: AidTextStyles.bodyMd.copyWith(
-                  color: const Color(0xFF7C3AED),
+                  color: AidColors.donorAccent,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -716,11 +716,11 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
                       children: [
                         CircleAvatar(
                           radius: 18,
-                          backgroundColor: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                          backgroundColor: AidColors.donorAccent.withValues(alpha: 0.15),
                           child: Text(
                             name.isNotEmpty ? name[0].toUpperCase() : '?',
                             style: const TextStyle(
-                              color: Color(0xFF7C3AED),
+                              color: AidColors.donorAccent,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -734,7 +734,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
                         ),
                         Text(
                           '₹${amount.toInt()}',
-                          style: AidTextStyles.headingSm.copyWith(color: const Color(0xFF7C3AED)),
+                          style: AidTextStyles.headingSm.copyWith(color: AidColors.donorAccent),
                         ),
                       ],
                     ),
@@ -758,11 +758,11 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.stars_rounded, color: Color(0xFF7C3AED), size: 15),
+                const Icon(Icons.stars_rounded, color: AidColors.donorAccent, size: 15),
                 const Gap(5),
                 Text(
                   'Earn +20 reward points with your donation',
-                  style: AidTextStyles.bodySm.copyWith(color: const Color(0xFF7C3AED)),
+                  style: AidTextStyles.bodySm.copyWith(color: AidColors.donorAccent),
                 ),
               ],
             ),
@@ -772,7 +772,7 @@ class _FeaturedCauseScreenState extends State<FeaturedCauseScreen> {
               child: ElevatedButton(
                 onPressed: _loading ? null : () => _donate(campaign),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF7C3AED),
+                  backgroundColor: AidColors.donorAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
