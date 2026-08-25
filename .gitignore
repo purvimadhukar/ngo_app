@@ -49,3 +49,4 @@ build/
 *.g.dart
 *.freezed.dart
 major_ngo.zip
+flutter/
