@@ -321,7 +321,6 @@ class _AddResidentScreenState extends State<AddResidentScreen> {
               initialValue: _careHomeName,
               onChanged: (v) => setState(() => _careHomeName = v),
             ),
-            ),
             const Gap(20),
 
             // ── Location ──────────────────────────────────────────────────────
